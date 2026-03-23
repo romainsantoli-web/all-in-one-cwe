@@ -1,0 +1,44 @@
+id: cwe-639-idor-detection
+info:
+  name: Insecure Direct Object Reference (IDOR)
+  author: security-all-in-one
+  severity: high
+  description: Tests for IDOR by manipulating numeric IDs in common API patterns
+  classification:
+    cwe-id: CWE-639
+    cvss-score: 7.5
+  tags: idor,cwe-639,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users/1"
+      - "{{BaseURL}}/api/users/2"
+      - "{{BaseURL}}/api/user/1"
+      - "{{BaseURL}}/api/user/2"
+      - "{{BaseURL}}/api/account/1"
+      - "{{BaseURL}}/api/account/2"
+      - "{{BaseURL}}/api/profile/1"
+      - "{{BaseURL}}/api/profile/2"
+      - "{{BaseURL}}/api/order/1"
+      - "{{BaseURL}}/api/order/2"
+      - "{{BaseURL}}/api/v1/users/1"
+      - "{{BaseURL}}/api/v1/users/2"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: header
+        words:
+          - "application/json"
+
+    extractors:
+      - type: json
+        json:
+          - ".id"
+          - ".email"
+          - ".username"

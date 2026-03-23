@@ -1,0 +1,44 @@
+id: cwe-89-sqli-error-based
+info:
+  name: Error-based SQL Injection Detection
+  author: security-all-in-one
+  severity: critical
+  description: Detects SQL injection via error messages in responses
+  classification:
+    cwe-id: CWE-89
+    cvss-score: 9.8
+  tags: sqli,cwe-89,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?id=1'"
+      - "{{BaseURL}}/?id=1%22"
+      - "{{BaseURL}}/?id=1%20OR%201=1"
+      - "{{BaseURL}}/?id=1%20UNION%20SELECT%20NULL--"
+      - "{{BaseURL}}/?id=1;%20WAITFOR%20DELAY%20'0:0:5'--"
+      - "{{BaseURL}}/?id=1'%20AND%20'1'='1"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "SQL syntax"
+          - "mysql_fetch"
+          - "ORA-"
+          - "PostgreSQL"
+          - "SQLite3::"
+          - "Microsoft SQL Server"
+          - "ODBC SQL Server"
+          - "Unclosed quotation mark"
+          - "pg_query()"
+          - "sqlite_"
+          - "syntax error at or near"
+          - "warning: mysql"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+          - 500

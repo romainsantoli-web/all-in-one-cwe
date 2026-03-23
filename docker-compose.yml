@@ -1,0 +1,420 @@
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+# Security All-in-One CWE — Docker Compose
+# Usage: docker compose up <service> ou ./runner.sh <target>
+# Couvre 95+ CWE via 15 outils intégrés.
+
+x-common: &common
+  restart: "no"
+
+services:
+  # ============================================================
+  # 1. DAST — Nuclei (11 000+ templates)
+  # Couvre: CWE-79,89,78,918,611,22,639,352,601,444,113,1336,
+  #         90,94,91,99,1021,284,287,200,215,209,548,400,644,
+  #         93,307,425,434,942,524,349,1022,613,640,620,1236,
+  #         300,312,319,311,522,523,922,532,326,327,328,330,338,
+  #         321,259,798,257,256,260,261,325,323,324,295,296,657
+  # ============================================================
+  nuclei:
+    <<: *common
+    image: projectdiscovery/nuclei:latest
+    volumes:
+      - ./reports/nuclei:/output
+      - ./custom-rules/nuclei:/custom-templates:ro
+      - ./configs/nuclei-config.yaml:/root/.config/nuclei/config.yaml:ro
+    entrypoint: ["nuclei"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-t"
+      - "/custom-templates/"
+      - "-severity"
+      - "info,low,medium,high,critical"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "-bulk-size"
+      - "25"
+      - "-concurrency"
+      - "10"
+      - "-stats"
+
+  # Nuclei with default templates (full coverage)
+  nuclei-full:
+    <<: *common
+    image: projectdiscovery/nuclei:latest
+    volumes:
+      - ./reports/nuclei:/output
+      - ./custom-rules/nuclei:/custom-templates:ro
+    entrypoint: ["nuclei"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-severity"
+      - "info,low,medium,high,critical"
+      - "-json"
+      - "-o"
+      - "/output/full-scan-${SCAN_DATE:-latest}.json"
+      - "-rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "-stats"
+    profiles: ["full"]
+
+  # ============================================================
+  # 2. DAST — OWASP ZAP (scanner interactif + automation)
+  # Couvre: CWE-79,89,78,22,352,601,611,1021,93,200,209,215,
+  #         548,284,287,307,434,613,640,620,400,644,942,524,319
+  # ============================================================
+  zap:
+    <<: *common
+    image: ghcr.io/zaproxy/zaproxy:stable
+    volumes:
+      - ./reports/zap:/zap/wrk
+      - ./configs/zap-config.yaml:/zap/wrk/zap-config.yaml:ro
+    entrypoint: ["zap.sh"]
+    command:
+      - "-cmd"
+      - "-autorun"
+      - "/zap/wrk/zap-config.yaml"
+
+  zap-baseline:
+    <<: *common
+    image: ghcr.io/zaproxy/zaproxy:stable
+    volumes:
+      - ./reports/zap:/zap/wrk
+    entrypoint: ["zap-baseline.py"]
+    command:
+      - "-t"
+      - "${TARGET:-https://example.com}"
+      - "-J"
+      - "baseline-${SCAN_DATE:-latest}.json"
+      - "-r"
+      - "baseline-${SCAN_DATE:-latest}.html"
+
+  zap-full:
+    <<: *common
+    image: ghcr.io/zaproxy/zaproxy:stable
+    volumes:
+      - ./reports/zap:/zap/wrk
+    entrypoint: ["zap-full-scan.py"]
+    command:
+      - "-t"
+      - "${TARGET:-https://example.com}"
+      - "-J"
+      - "full-${SCAN_DATE:-latest}.json"
+      - "-r"
+      - "full-${SCAN_DATE:-latest}.html"
+      - "-a"
+    profiles: ["full"]
+
+  zap-gui:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+    volumes:
+      - ./reports/zap:/zap/wrk
+    entrypoint: ["zap.sh"]
+    command: ["-daemon", "-host", "0.0.0.0", "-port", "8080"]
+    profiles: ["gui"]
+
+  # ============================================================
+  # 3. DAST — SQLMap (spécialiste SQL Injection CWE-89)
+  # ============================================================
+  sqlmap:
+    <<: *common
+    image: paosin/sqlmap:latest
+    volumes:
+      - ./reports/sqlmap:/output
+    entrypoint: ["python", "/sqlmap/sqlmap.py"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "--batch"
+      - "--level=3"
+      - "--risk=2"
+      - "--output-dir=/output"
+      - "--forms"
+      - "--crawl=2"
+      - "--threads=4"
+      - "--tamper=space2comment,between"
+
+  # ============================================================
+  # 4. DAST — SSTImap (SSTI/CSTI - CWE-1336)
+  # ============================================================
+  sstimap:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            pip install --no-cache-dir sstimap && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /app
+    volumes:
+      - ./reports/sstimap:/output
+    entrypoint: ["sstimap"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+
+  # ============================================================
+  # 5. DNS — dnsReaper (subdomain takeover CWE-16)
+  # ============================================================
+  dnsreaper:
+    <<: *common
+    image: punksecurity/dnsreaper:latest
+    volumes:
+      - ./reports/dnsreaper:/output
+    command:
+      - "single"
+      - "--domain"
+      - "${DOMAIN:-example.com}"
+      - "--out"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "--out-format"
+      - "json"
+
+  # ============================================================
+  # 6. DNS — Subdominator (subdomain takeover CWE-16)
+  # ============================================================
+  subdominator:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir subdominator
+        WORKDIR /app
+    volumes:
+      - ./reports/subdominator:/output
+    entrypoint: ["subdominator"]
+    command:
+      - "-d"
+      - "${DOMAIN:-example.com}"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+
+  # ============================================================
+  # 7. SAST — Semgrep (analyse statique polyvalente)
+  # Couvre: CWE-89,78,79,94,327,295,502,312,319,311,798,259,
+  #         256,260,321,522,338,330,326,328,134,1336,90,91,352,
+  #         918,22,611,400,284,287,613,640,1427
+  # ============================================================
+  semgrep:
+    <<: *common
+    image: semgrep/semgrep:latest
+    volumes:
+      - ./reports/semgrep:/output
+      - ./custom-rules/semgrep:/rules:ro
+      - ${CODE:-./tools}:/src:ro
+    working_dir: /src
+    entrypoint: ["semgrep"]
+    command:
+      - "scan"
+      - "--config=auto"
+      - "--config=/rules/"
+      - "--json"
+      - "--output=/output/scan-${SCAN_DATE:-latest}.json"
+      - "--severity=INFO"
+      - "--max-target-bytes=5000000"
+      - "/src"
+
+  # ============================================================
+  # 8. Secrets — Gitleaks (rapide, CWE-798,259,256,260,321,312)
+  # ============================================================
+  gitleaks:
+    <<: *common
+    image: ghcr.io/gitleaks/gitleaks:latest
+    volumes:
+      - ./reports/gitleaks:/output
+      - ./configs/gitleaks.toml:/config/gitleaks.toml:ro
+      - ${REPO:-./tools}:/src:ro
+    entrypoint: ["gitleaks"]
+    command:
+      - "detect"
+      - "--source=/src"
+      - "--report-path=/output/scan-${SCAN_DATE:-latest}.json"
+      - "--report-format=json"
+      - "--config=/config/gitleaks.toml"
+      - "-v"
+
+  # ============================================================
+  # 9. Secrets — TruffleHog (exhaustif, CWE-798,259,256,321,312,522)
+  # ============================================================
+  trufflehog:
+    <<: *common
+    image: trufflesecurity/trufflehog:latest
+    volumes:
+      - ./reports/trufflehog:/output
+      - ${REPO:-./tools}:/src:ro
+    entrypoint: ["trufflehog"]
+    command:
+      - "filesystem"
+      - "--directory=/src"
+      - "--json"
+      - "--only-verified"
+
+  # ============================================================
+  # 10. SCA — Trivy (containers + code + secrets + misconfigs)
+  # Couvre: CWE-1395,16,312,319,798,259,256,327,326,295,502
+  # ============================================================
+  trivy:
+    <<: *common
+    image: aquasecurity/trivy:latest
+    volumes:
+      - ./reports/trivy:/output
+      - ${CODE:-./tools}:/src:ro
+      - trivy-cache:/root/.cache/trivy
+    entrypoint: ["trivy"]
+    command:
+      - "fs"
+      - "--format=json"
+      - "--output=/output/scan-${SCAN_DATE:-latest}.json"
+      - "--severity=LOW,MEDIUM,HIGH,CRITICAL"
+      - "--scanners=vuln,secret,misconfig"
+      - "/src"
+
+  trivy-image:
+    <<: *common
+    image: aquasecurity/trivy:latest
+    volumes:
+      - ./reports/trivy:/output
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - trivy-cache:/root/.cache/trivy
+    entrypoint: ["trivy"]
+    command:
+      - "image"
+      - "--format=json"
+      - "--output=/output/image-scan-${SCAN_DATE:-latest}.json"
+      - "--severity=LOW,MEDIUM,HIGH,CRITICAL"
+      - "${IMAGE:-alpine:latest}"
+    profiles: ["image"]
+
+  # ============================================================
+  # 11. SCA — OWASP Dependency-Check
+  # Couvre: CWE-1395 (composants vulnérables)
+  # ============================================================
+  dependency-check:
+    <<: *common
+    image: owasp/dependency-check:latest
+    volumes:
+      - ./reports/dependency-check:/output
+      - ${CODE:-./tools}:/src:ro
+      - dependency-check-data:/usr/share/dependency-check/data
+    entrypoint: ["/usr/share/dependency-check/bin/dependency-check.sh"]
+    command:
+      - "--project"
+      - "bug-bounty-scan"
+      - "--scan"
+      - "/src"
+      - "--format"
+      - "JSON"
+      - "--out"
+      - "/output"
+      - "--enableExperimental"
+
+  # ============================================================
+  # 12. Binary — cwe_checker (CWE pour binaires ELF/PE)
+  # Couvre: CWE-120,121,122,124,125,126,127,128,129,131,134,
+  #         170,190,191,193,415,416,476,843,123
+  # ============================================================
+  cwe-checker:
+    <<: *common
+    image: fkiecad/cwe_checker:latest
+    volumes:
+      - ./reports/cwe-checker:/output
+      - ${BIN:-/dev/null}:/input/binary:ro
+    entrypoint: ["cwe_checker"]
+    command:
+      - "/input/binary"
+      - "--json"
+      - "--out=/output/scan-${SCAN_DATE:-latest}.json"
+
+  # ============================================================
+  # 13. Binary — cve-bin-tool (CVE dans binaires/SBOMs)
+  # Couvre: CWE-1395 + composants connus vulnérables
+  # ============================================================
+  cve-bin-tool:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir cve-bin-tool
+        WORKDIR /app
+    volumes:
+      - ./reports/cve-bin-tool:/output
+      - ${BIN_DIR:-./tools}:/input:ro
+    entrypoint: ["cve-bin-tool"]
+    command:
+      - "/input"
+      - "--format"
+      - "json"
+      - "--output-file"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+
+  # ============================================================
+  # 14. LLM — garak (scanner prompt injection CWE-1427)
+  # ============================================================
+  garak:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir garak
+        WORKDIR /app
+    volumes:
+      - ./reports/garak:/output
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    entrypoint: ["python", "-m", "garak"]
+    command:
+      - "--model_type"
+      - "${LLM_TYPE:-openai}"
+      - "--model_name"
+      - "${LLM_MODEL:-gpt-3.5-turbo}"
+      - "--probes"
+      - "promptinject,dan,encoding,gcg,knownbadsignatures"
+      - "--report_prefix"
+      - "/output/scan-${SCAN_DATE:-latest}"
+
+  # ============================================================
+  # 15. Reporting — DefectDojo (dashboard unifié)
+  # ============================================================
+  defectdojo-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: defectdojo
+      POSTGRES_USER: defectdojo
+      POSTGRES_PASSWORD: "${DEFECTDOJO_DB_PASSWORD:-changeme}"
+    volumes:
+      - defectdojo-db:/var/lib/postgresql/data
+    profiles: ["defectdojo"]
+
+  defectdojo-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    profiles: ["defectdojo"]
+
+  defectdojo:
+    image: defectdojo/defectdojo-django:latest
+    ports:
+      - "8443:8443"
+    environment:
+      DD_DATABASE_URL: "postgresql://defectdojo:${DEFECTDOJO_DB_PASSWORD:-changeme}@defectdojo-db:5432/defectdojo"
+      DD_SECRET_KEY: "${DD_SECRET_KEY:-change-me-in-production}"
+      DD_CREDENTIAL_AES_256_KEY: "${DD_AES_KEY:-change-me-in-production-too}"
+    depends_on:
+      - defectdojo-db
+      - defectdojo-rabbitmq
+    profiles: ["defectdojo"]
+
+volumes:
+  trivy-cache:
+  dependency-check-data:
+  defectdojo-db:

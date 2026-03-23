@@ -1,0 +1,44 @@
+id: cwe-601-open-redirect
+info:
+  name: Open Redirect Detection
+  author: security-all-in-one
+  severity: medium
+  description: Tests for open redirect vulnerabilities
+  classification:
+    cwe-id: CWE-601
+    cvss-score: 6.1
+  tags: redirect,cwe-601,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?redirect=https://evil.com"
+      - "{{BaseURL}}/?url=https://evil.com"
+      - "{{BaseURL}}/?next=https://evil.com"
+      - "{{BaseURL}}/?return=https://evil.com"
+      - "{{BaseURL}}/?returnTo=https://evil.com"
+      - "{{BaseURL}}/?continue=https://evil.com"
+      - "{{BaseURL}}/?dest=https://evil.com"
+      - "{{BaseURL}}/?destination=//evil.com"
+      - "{{BaseURL}}/?redir=//evil.com"
+      - "{{BaseURL}}/?goto=//evil.com"
+      - "{{BaseURL}}/?out=//evil.com"
+      - "{{BaseURL}}/?checkout_url=https://evil.com"
+
+    redirects: true
+    max-redirects: 3
+
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?i)location:\s*https?://evil\.com"
+
+      - type: status
+        status:
+          - 301
+          - 302
+          - 303
+          - 307
+          - 308

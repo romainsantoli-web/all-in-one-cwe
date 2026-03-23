@@ -1,0 +1,56 @@
+id: cwe-security-headers-missing
+info:
+  name: Missing Security Headers
+  author: security-all-in-one
+  severity: info
+  description: Checks for missing security headers (CORS, CSP, HSTS, X-Frame, etc.)
+  classification:
+    cwe-id: CWE-693
+    cvss-score: 4.3
+  tags: headers,cwe-942,cwe-1021,cwe-644,misconfig,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: or
+    matchers:
+      # Missing X-Frame-Options (clickjacking CWE-1021)
+      - type: word
+        part: header
+        words:
+          - "X-Frame-Options"
+        negative: true
+
+      # Missing Content-Security-Policy
+      - type: word
+        part: header
+        words:
+          - "Content-Security-Policy"
+        negative: true
+
+      # Missing Strict-Transport-Security
+      - type: word
+        part: header
+        words:
+          - "Strict-Transport-Security"
+        negative: true
+
+      # Wildcard CORS (CWE-942)
+      - type: word
+        part: header
+        words:
+          - "Access-Control-Allow-Origin: *"
+
+    extractors:
+      - type: kval
+        kval:
+          - x_frame_options
+          - content_security_policy
+          - strict_transport_security
+          - access_control_allow_origin
+          - x_content_type_options
+          - x_xss_protection
+          - referrer_policy
+          - permissions_policy

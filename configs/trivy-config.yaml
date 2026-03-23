@@ -1,0 +1,12 @@
+# Trivy configuration
+scan:
+  severity:
+    - LOW
+    - MEDIUM
+    - HIGH
+    - CRITICAL
+  scanners:
+    - vuln
+    - secret
+    - misconfig
+  format: json

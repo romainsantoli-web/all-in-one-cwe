@@ -1,0 +1,46 @@
+# ZAP Automation Framework configuration
+# Docs: https://www.zaproxy.org/docs/automate/automation-framework/
+env:
+  contexts:
+    - name: "default"
+      urls:
+        - "${TARGET:-https://example.com}"
+      includePaths:
+        - "${TARGET:-https://example.com}.*"
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      maxDuration: 5
+      maxDepth: 5
+      maxChildren: 10
+
+  - type: spiderAjax
+    parameters:
+      maxDuration: 5
+      maxCrawlDepth: 5
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: activeScan
+    parameters:
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 30
+      policy: "Default Policy"
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "/zap/wrk"
+      reportFile: "scan-report.json"
+    risks:
+      - high
+      - medium
+      - low
+      - info

@@ -1,0 +1,10 @@
+# Semgrep configuration
+# Rulesets covering CWE from the bug bounty list
+rules:
+  # Use auto config to pull OWASP Top 10 + language-specific rules
+  # Additional custom rules are in custom-rules/semgrep/
+  - id: placeholder
+    message: "This is a placeholder — real rules are auto-loaded and in custom-rules/"
+    severity: INFO
+    languages: [generic]
+    pattern: "PLACEHOLDER_WILL_NEVER_MATCH_12345"

@@ -1,0 +1,35 @@
+# Gitleaks configuration
+# Extends default rules — add custom patterns below
+title = "Security All-in-One CWE — Gitleaks Config"
+
+[extend]
+# Use built-in default rules
+useDefault = true
+
+# Additional custom rules
+[[rules]]
+id = "custom-api-key"
+description = "Generic API Key pattern"
+regex = '(?i)(api[_-]?key|apikey)[\\s]*[:=][\\s]*[\'\"\'\`]?([a-zA-Z0-9_\\-]{20,})[\'\"\'\`]?'
+tags = ["key", "api"]
+
+[[rules]]
+id = "custom-jwt"
+description = "JWT Token"
+regex = 'eyJ[a-zA-Z0-9_-]{10,}\\.eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_\\-]+'
+tags = ["token", "jwt"]
+
+[[rules]]
+id = "custom-password-assignment"
+description = "Password assignment in code"
+regex = '(?i)(password|passwd|pwd)[\\s]*[:=][\\s]*[\'\"\`]([^\'\"\`\\s]{8,})[\'\"\`]'
+tags = ["password"]
+
+[allowlist]
+paths = [
+    ".gitleaks.toml",
+    "(?i)test",
+    "(?i)mock",
+    "(?i)example",
+    "node_modules",
+]

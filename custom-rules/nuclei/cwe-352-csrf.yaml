@@ -1,0 +1,44 @@
+id: cwe-352-csrf-token-missing
+info:
+  name: CSRF Token Missing on Forms
+  author: security-all-in-one
+  severity: medium
+  description: Detects forms without CSRF protection
+  classification:
+    cwe-id: CWE-352
+    cvss-score: 6.5
+  tags: csrf,cwe-352,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/login"
+      - "{{BaseURL}}/register"
+      - "{{BaseURL}}/settings"
+      - "{{BaseURL}}/profile"
+      - "{{BaseURL}}/account"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "<form"
+          - "method="
+        condition: and
+
+      - type: word
+        part: body
+        words:
+          - "csrf"
+          - "_token"
+          - "authenticity_token"
+          - "__RequestVerificationToken"
+          - "csrfmiddlewaretoken"
+        negative: true
+        condition: and
+
+      - type: status
+        status:
+          - 200

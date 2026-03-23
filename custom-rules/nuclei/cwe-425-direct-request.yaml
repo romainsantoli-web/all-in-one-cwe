@@ -1,0 +1,47 @@
+id: cwe-425-direct-request
+info:
+  name: Direct Request / Forced Browsing
+  author: security-all-in-one
+  severity: medium
+  description: Tests access to admin/internal pages without authentication
+  classification:
+    cwe-id: CWE-425
+    cvss-score: 7.5
+  tags: forced-browsing,cwe-425,cwe-284,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin"
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/administrator"
+      - "{{BaseURL}}/admin/dashboard"
+      - "{{BaseURL}}/admin/config"
+      - "{{BaseURL}}/panel"
+      - "{{BaseURL}}/dashboard"
+      - "{{BaseURL}}/internal"
+      - "{{BaseURL}}/api/admin"
+      - "{{BaseURL}}/api/internal"
+      - "{{BaseURL}}/api/v1/admin"
+      - "{{BaseURL}}/management"
+      - "{{BaseURL}}/console"
+      - "{{BaseURL}}/_admin"
+      - "{{BaseURL}}/backoffice"
+
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "dashboard"
+          - "admin"
+          - "configuration"
+          - "settings"
+          - "management"
+        condition: or

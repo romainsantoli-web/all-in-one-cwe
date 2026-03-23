@@ -1,0 +1,31 @@
+id: cwe-1336-ssti-detection
+info:
+  name: Server-Side Template Injection (SSTI)
+  author: security-all-in-one
+  severity: critical
+  description: Tests for SSTI across multiple template engines
+  classification:
+    cwe-id: CWE-1336
+    cvss-score: 9.8
+  tags: ssti,cwe-1336,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?name={{url_encode('{{7*7}}')}}"
+      - "{{BaseURL}}/?template={{url_encode('${7*7}')}}"
+      - "{{BaseURL}}/?page={{url_encode('<%= 7*7 %>')}}"
+      - "{{BaseURL}}/?q={{url_encode('#{7*7}')}}"
+      - "{{BaseURL}}/?search={{url_encode('{7*7}')}}"
+      - "{{BaseURL}}/?input={{url_encode('{{config}}')}}"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "49"
+
+      - type: status
+        status:
+          - 200

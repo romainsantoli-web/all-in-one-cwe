@@ -1,0 +1,77 @@
+rules:
+  # CWE-79: XSS (JavaScript)
+  - id: cwe-79-xss-innerHTML
+    pattern: $EL.innerHTML = $VAR
+    message: "XSS risk: assigning user-controlled value to innerHTML"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      cwe:
+        - "CWE-79: Cross-site Scripting"
+
+  - id: cwe-79-xss-document-write
+    pattern: document.write($VAR)
+    message: "XSS risk: document.write with potentially user-controlled input"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      cwe:
+        - "CWE-79: Cross-site Scripting"
+
+  # CWE-89: SQL Injection (JavaScript/Node.js)
+  - id: cwe-89-sqli-nodejs
+    patterns:
+      - pattern: |
+          $DB.query("..." + $VAR + "...")
+      - pattern: |
+          $DB.query(`...${$VAR}...`)
+    message: "SQL injection: user input concatenated into query string"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      cwe:
+        - "CWE-89: SQL Injection"
+
+  # CWE-1022: window.opener
+  - id: cwe-1022-window-opener
+    pattern: window.open($URL)
+    message: "Missing rel=noopener — target window can access window.opener"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      cwe:
+        - "CWE-1022: Use of Web Link to Untrusted Target with window.opener Access"
+
+  # CWE-1236: CSV Formula Injection
+  - id: cwe-1236-csv-injection
+    patterns:
+      - pattern: |
+          csv.writer(...).writerow([..., $USER_INPUT, ...])
+    message: "Potential CSV formula injection — sanitize cell values starting with =, +, -, @"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-1236: CSV Formula Injection"
+
+  # CWE-352: Missing CSRF (Django)
+  - id: cwe-352-django-csrf-exempt
+    pattern: "@csrf_exempt"
+    message: "CSRF protection disabled — ensure this is intentional"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-352: CSRF"
+
+  # CWE-613: Session Expiration
+  - id: cwe-613-session-no-expiry
+    patterns:
+      - pattern: |
+          SESSION_COOKIE_AGE = $VAL
+    message: "Check session cookie age — ensure it's not excessively long"
+    severity: INFO
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-613: Insufficient Session Expiration"

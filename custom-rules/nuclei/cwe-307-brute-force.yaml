@@ -1,0 +1,62 @@
+id: cwe-307-brute-force-detection
+info:
+  name: Missing Brute Force Protection
+  author: security-all-in-one
+  severity: medium
+  description: Detects login forms without rate limiting or account lockout
+  classification:
+    cwe-id: CWE-307
+    cvss-score: 7.5
+  tags: brute-force,cwe-307,dast,bug-bounty
+
+http:
+  # Send 10 rapid login attempts — check if all succeed (no lockout)
+  - raw:
+      - |
+        POST {{BaseURL}}/login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        username=admin&password=wrong1
+      - |
+        POST {{BaseURL}}/login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        username=admin&password=wrong2
+      - |
+        POST {{BaseURL}}/login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        username=admin&password=wrong3
+      - |
+        POST {{BaseURL}}/login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        username=admin&password=wrong4
+      - |
+        POST {{BaseURL}}/login HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+
+        username=admin&password=wrong5
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 401
+          - 403
+
+      # No rate limit header or lockout response
+      - type: word
+        part: header
+        words:
+          - "Retry-After"
+          - "X-RateLimit"
+          - "rate limit"
+        negative: true
+        condition: and

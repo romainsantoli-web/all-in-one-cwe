@@ -1,0 +1,52 @@
+id: cwe-502-deserialization-detect
+info:
+  name: Deserialization of Untrusted Data
+  author: security-all-in-one
+  severity: critical
+  description: Detects potential insecure deserialization endpoints
+  classification:
+    cwe-id: CWE-502
+    cvss-score: 9.8
+  tags: deserialization,cwe-502,dast,bug-bounty
+
+http:
+  # Java deserialization (serialized object header)
+  - raw:
+      - |
+        POST {{BaseURL}} HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-java-serialized-object
+
+        {{hex_decode('aced0005')}}
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "java.io"
+          - "ClassNotFoundException"
+          - "InvalidClassException"
+          - "StreamCorruptedException"
+        condition: or
+
+      - type: status
+        status:
+          - 500
+
+  # Detect serialized data in cookies/responses (Java, PHP, .NET)
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    matchers-condition: or
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          # Java serialized objects (base64 encoded aced0005)
+          - "rO0AB"
+          # PHP serialized objects
+          - "O:[0-9]+:"[a-zA-Z]"
+          # .NET ViewState
+          - "__VIEWSTATE"

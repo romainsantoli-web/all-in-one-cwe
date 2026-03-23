@@ -1,0 +1,34 @@
+id: cwe-434-unrestricted-upload
+info:
+  name: Unrestricted File Upload Detection
+  author: security-all-in-one
+  severity: critical
+  description: Detects upload endpoints accepting dangerous file types
+  classification:
+    cwe-id: CWE-434
+    cvss-score: 9.8
+  tags: upload,cwe-434,dast,bug-bounty
+
+http:
+  # Detect upload forms
+  - method: GET
+    path:
+      - "{{BaseURL}}/upload"
+      - "{{BaseURL}}/file-upload"
+      - "{{BaseURL}}/api/upload"
+      - "{{BaseURL}}/api/files"
+      - "{{BaseURL}}/admin/upload"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "multipart/form-data"
+          - "type="file""
+          - "enctype="
+        condition: or
+
+      - type: status
+        status:
+          - 200

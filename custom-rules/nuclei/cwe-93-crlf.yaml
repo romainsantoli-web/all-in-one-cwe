@@ -1,0 +1,25 @@
+id: cwe-93-crlf-injection
+info:
+  name: CRLF Injection
+  author: security-all-in-one
+  severity: medium
+  description: Tests for CRLF injection in HTTP headers
+  classification:
+    cwe-id: CWE-93
+    cvss-score: 6.1
+  tags: crlf,cwe-93,cwe-113,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/%0d%0aX-Injected: true"
+      - "{{BaseURL}}/?redirect=%0d%0aX-Injected:%20true"
+      - "{{BaseURL}}/?url=%0d%0aSet-Cookie:%20injected=true"
+
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "X-Injected: true"
+          - "Set-Cookie: injected=true"
+        condition: or

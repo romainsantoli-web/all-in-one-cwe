@@ -1,0 +1,43 @@
+id: cwe-524-cache-deception
+info:
+  name: Web Cache Deception
+  author: security-all-in-one
+  severity: high
+  description: Tests for web cache deception attacks
+  classification:
+    cwe-id: CWE-524
+    cvss-score: 7.5
+  tags: cache,cwe-524,cwe-349,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/account/profile.css"
+      - "{{BaseURL}}/account/settings.js"
+      - "{{BaseURL}}/account/dashboard.png"
+      - "{{BaseURL}}/api/me/test.css"
+      - "{{BaseURL}}/user/profile/x.css"
+      - "{{BaseURL}}/my-account/abc.js"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "email"
+          - "username"
+          - "account"
+          - "balance"
+          - "address"
+        condition: or
+
+      - type: word
+        part: header
+        words:
+          - "text/html"
+          - "application/json"
+        condition: or

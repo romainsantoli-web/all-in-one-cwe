@@ -1,0 +1,69 @@
+id: cwe-200-information-disclosure
+info:
+  name: Information Disclosure via Common Paths
+  author: security-all-in-one
+  severity: medium
+  description: >
+    Detects information disclosure through debug endpoints, directory listing,
+    error messages, and sensitive files.
+  classification:
+    cwe-id: CWE-200
+    cvss-score: 5.3
+  tags: info-disclosure,cwe-200,cwe-215,cwe-209,cwe-548,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.git/config"
+      - "{{BaseURL}}/.git/HEAD"
+      - "{{BaseURL}}/debug"
+      - "{{BaseURL}}/phpinfo.php"
+      - "{{BaseURL}}/server-status"
+      - "{{BaseURL}}/server-info"
+      - "{{BaseURL}}/.svn/entries"
+      - "{{BaseURL}}/wp-config.php.bak"
+      - "{{BaseURL}}/config.json"
+      - "{{BaseURL}}/config.yaml"
+      - "{{BaseURL}}/config.yml"
+      - "{{BaseURL}}/.DS_Store"
+      - "{{BaseURL}}/robots.txt"
+      - "{{BaseURL}}/sitemap.xml"
+      - "{{BaseURL}}/crossdomain.xml"
+      - "{{BaseURL}}/.well-known/security.txt"
+      - "{{BaseURL}}/api/swagger.json"
+      - "{{BaseURL}}/api/v1/swagger.json"
+      - "{{BaseURL}}/swagger-ui.html"
+      - "{{BaseURL}}/api-docs"
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/actuator"
+      - "{{BaseURL}}/actuator/env"
+      - "{{BaseURL}}/actuator/health"
+      - "{{BaseURL}}/trace"
+      - "{{BaseURL}}/elmah.axd"
+      - "{{BaseURL}}/web.config"
+
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        part: body
+        words:
+          - "DB_PASSWORD"
+          - "[core]"
+          - "ref: refs"
+          - "phpinfo()"
+          - "Index of /"
+          - "Directory listing"
+          - "swagger"
+          - "openapi"
+          - "actuator"
+          - "APP_KEY"
+          - "SECRET_KEY"
+          - "PRIVATE_KEY"
+        condition: or

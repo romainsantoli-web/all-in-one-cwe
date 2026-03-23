@@ -1,0 +1,32 @@
+id: cwe-918-ssrf-detection
+info:
+  name: Server-Side Request Forgery (SSRF) Detection
+  author: security-all-in-one
+  severity: critical
+  description: Tests for SSRF via common parameters
+  classification:
+    cwe-id: CWE-918
+    cvss-score: 9.1
+  tags: ssrf,cwe-918,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?url=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?redirect=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?dest=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?path=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?file=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?page=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?fetch=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?load=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?img=https://{{interactsh-url}}"
+      - "{{BaseURL}}/?uri=https://{{interactsh-url}}"
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+          - "dns"
+        condition: or

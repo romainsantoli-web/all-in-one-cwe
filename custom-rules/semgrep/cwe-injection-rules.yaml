@@ -1,0 +1,157 @@
+rules:
+  # CWE-89: SQL Injection
+  - id: cwe-89-sql-injection-python
+    patterns:
+      - pattern: |
+          cursor.execute("..." + $VAR + "...")
+      - pattern: |
+          cursor.execute(f"...{$VAR}...")
+      - pattern: |
+          cursor.execute("...%s..." % $VAR)
+    message: "Potential SQL injection: user input concatenated into SQL query"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-89: SQL Injection"
+      confidence: HIGH
+
+  # CWE-78: OS Command Injection
+  - id: cwe-78-command-injection-python
+    patterns:
+      - pattern: os.system($CMD)
+      - pattern: os.popen($CMD)
+      - pattern: subprocess.call($CMD, shell=True, ...)
+      - pattern: subprocess.run($CMD, shell=True, ...)
+      - pattern: subprocess.Popen($CMD, shell=True, ...)
+    message: "Potential OS command injection via shell execution"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-78: OS Command Injection"
+
+  # CWE-502: Insecure Deserialization
+  - id: cwe-502-pickle-deserialize
+    patterns:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: yaml.load(...) 
+      - pattern: yaml.unsafe_load(...)
+    message: "Insecure deserialization — use safe alternatives (yaml.safe_load, json)"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+
+  # CWE-798: Hard-coded Credentials
+  - id: cwe-798-hardcoded-credentials
+    patterns:
+      - pattern: |
+          password = "..."
+      - pattern: |
+          api_key = "..."
+      - pattern: |
+          secret_key = "..."
+      - pattern: |
+          secret = "..."
+      - pattern: |
+          token = "..."
+    message: "Hard-coded credential detected — use environment variables or a secrets manager"
+    severity: WARNING
+    languages: [python, javascript, typescript]
+    metadata:
+      cwe:
+        - "CWE-798: Hard-coded Credentials"
+        - "CWE-259: Hard-coded Password"
+
+  # CWE-327: Weak Cryptography
+  - id: cwe-327-weak-crypto-python
+    patterns:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+      - pattern: Crypto.Cipher.DES.new(...)
+      - pattern: Crypto.Cipher.ARC4.new(...)
+    message: "Weak cryptographic algorithm — use SHA-256+ or AES-256"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-327: Use of Broken Crypto Algorithm"
+        - "CWE-328: Reversible One-Way Hash"
+
+  # CWE-918: SSRF
+  - id: cwe-918-ssrf-python
+    patterns:
+      - pattern: requests.get($URL, ...)
+        metavariable-pattern:
+          metavariable: $URL
+          pattern: |
+            ... request. ...
+      - pattern: urllib.request.urlopen($URL)
+    message: "Potential SSRF — validate and restrict URLs before fetching"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-918: SSRF"
+
+  # CWE-22: Path Traversal
+  - id: cwe-22-path-traversal-python
+    patterns:
+      - pattern: open(... + $USER_INPUT + ..., ...)
+      - pattern: open(f"...{$USER_INPUT}...", ...)
+      - pattern: |
+          os.path.join($BASE, $USER_INPUT)
+    message: "Potential path traversal — sanitize file paths and use allowlists"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-22: Path Traversal"
+
+  # CWE-295: Improper Certificate Validation
+  - id: cwe-295-ssl-verify-disabled
+    patterns:
+      - pattern: requests.get(..., verify=False, ...)
+      - pattern: requests.post(..., verify=False, ...)
+      - pattern: requests.put(..., verify=False, ...)
+      - pattern: requests.delete(..., verify=False, ...)
+    message: "SSL verification disabled — vulnerable to MITM attacks"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+        - "CWE-300: Man-in-the-Middle"
+
+  # CWE-338: Weak PRNG
+  - id: cwe-338-weak-random
+    patterns:
+      - pattern: random.random()
+      - pattern: random.randint(...)
+      - pattern: random.choice(...)
+    message: "Using non-cryptographic PRNG — use secrets module for security-sensitive values"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak PRNG"
+        - "CWE-330: Use of Insufficiently Random Values"
+
+  # CWE-1427: LLM Prompt Injection
+  - id: cwe-1427-prompt-injection
+    patterns:
+      - pattern: |
+          f"...{$USER_INPUT}..."
+        metavariable-pattern:
+          metavariable: $USER_INPUT
+          pattern: |
+            ... request. ...
+    message: "User input directly interpolated into LLM prompt — sanitize first"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe:
+        - "CWE-1427: Improper Neutralization of Input Used for LLM Prompting"

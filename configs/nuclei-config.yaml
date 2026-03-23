@@ -1,0 +1,26 @@
+# Nuclei configuration
+# Docs: https://docs.projectdiscovery.io/tools/nuclei/running
+
+severity:
+  - info
+  - low
+  - medium
+  - high
+  - critical
+
+rate-limit: 50
+bulk-size: 25
+concurrency: 10
+retries: 2
+timeout: 10
+
+# Headers
+header:
+  - "User-Agent: Mozilla/5.0 (Security Scanner)"
+
+# Enable stats display
+stats: true
+stats-interval: 5
+
+# Output
+json: true

