@@ -1,0 +1,14 @@
+# Slowloris Detector Configuration
+# =================================
+# Non-destructive detection mode only.
+
+# Maximum test connections (hard cap: 50):
+# max_connections: 20
+
+# Hold time in seconds (hard cap: 30):
+# hold_time: 15
+
+# NOTE: This scanner runs in DETECTION MODE ONLY.
+# It opens a small number of connections to test server behavior,
+# it does NOT attempt actual denial-of-service.
+# The safety limits (50 connections, 30s hold) cannot be exceeded.

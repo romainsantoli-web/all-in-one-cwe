@@ -1,0 +1,30 @@
+# WebSocket Scanner Configuration
+# ================================
+# Uncomment and customize sections as needed.
+
+# Additional WebSocket endpoints to test (beyond defaults):
+# endpoints:
+#   - /ws
+#   - /socket.io/
+#   - /graphql-ws
+#   - /subscriptions
+#   - /chat
+#   - /realtime
+
+# Rate limit (requests per second):
+# rate_limit: 50
+
+# Connection timeout (seconds):
+# timeout: 5
+
+# Skip specific checks:
+# skip_checks:
+#   - origin_bypass
+#   - auth_bypass
+#   - injection
+
+# Custom origin values to test:
+# evil_origins:
+#   - https://evil.com
+#   - null
+#   - https://attacker.local

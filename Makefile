@@ -25,6 +25,7 @@ export LLM_TYPE ?= openai
        idor auth-bypass user-enum notif-inject redirect-cors oidc-audit bypass-403-adv ssrf-scan xss-scan api-discovery secret-leak python-scanners \
        auth-extract auth-scan \
        scan-smart prefect-ui prefect-status report-smart \
+       websocket-scan cache-deception slowloris smuggler checkov restler \
        zap-gui report summary defectdojo-import clean nuke
 
 help: ## Show this help
@@ -70,6 +71,25 @@ report-smart: ## Generate intelligent report (dedup + CVSS + AI + dashboard)
 	python3 scripts/ai_analyzer.py
 	python3 scripts/generate_dashboard.py
 	@echo "Dashboard: reports/dashboard.html"
+
+# ── Phase 3: New tool targets ───────────────────────────
+websocket-scan: ## WebSocket security scan — TARGET required
+	docker compose --profile python-scanners run --rm websocket-scanner
+
+cache-deception: ## Web Cache Deception scan — TARGET required
+	docker compose --profile python-scanners run --rm cache-deception
+
+slowloris: ## Slowloris detection (non-destructive) — TARGET required
+	docker compose --profile python-scanners run --rm slowloris-check
+
+smuggler: ## HTTP Request Smuggling scan — TARGET required
+	docker compose --profile web-advanced run --rm smuggler
+
+checkov: ## IaC security scan (Terraform, K8s, Docker) — CODE required
+	docker compose --profile iac run --rm checkov
+
+restler: ## REST API fuzzing (Microsoft RESTler) — needs OpenAPI spec
+	docker compose --profile api-fuzzing run --rm restler
 
 # ── Individual tool targets ─────────────────────────────
 dast: ## DAST scan only (Nuclei + ZAP) — TARGET required

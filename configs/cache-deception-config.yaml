@@ -1,0 +1,27 @@
+# Cache Deception Scanner Configuration
+# ======================================
+# Uncomment and customize sections as needed.
+
+# Rate limit (requests per second — keep low to avoid bans):
+# rate_limit: 10
+
+# Sensitive paths to test (override defaults):
+# paths:
+#   - /account
+#   - /profile
+#   - /dashboard
+#   - /settings
+#   - /api/me
+
+# Authentication cookie (for testing authenticated caching):
+# auth_cookie: "session=YOUR_SESSION_COOKIE"
+
+# Authorization header:
+# auth_header: "Bearer YOUR_TOKEN"
+
+# Additional cache-busting extensions to test:
+# extensions:
+#   - .css
+#   - .js
+#   - .png
+#   - .woff2

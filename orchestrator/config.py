@@ -57,6 +57,7 @@ PARALLEL_GROUPS: list[dict] = [
             "idor-scanner", "auth-bypass", "user-enum", "notif-inject",
             "redirect-cors", "oidc-audit", "bypass-403-advanced",
             "ssrf-scanner", "xss-scanner", "api-discovery", "secret-leak",
+            "websocket-scanner", "cache-deception", "slowloris-check",
         ],
         "depends_on": ["recon"],
     },
@@ -80,6 +81,24 @@ PARALLEL_GROUPS: list[dict] = [
     {
         "name": "waf-bypass",
         "tools": ["bypass-403"],
+        "depends_on": ["recon"],
+    },
+    # ── Group 8: Web advanced — smuggling, cache deception ────────
+    {
+        "name": "web-advanced",
+        "tools": ["smuggler"],
+        "depends_on": ["dast"],
+    },
+    # ── Group 9: IaC / Cloud security scanning ────────────────────
+    {
+        "name": "iac",
+        "tools": ["checkov"],
+        "depends_on": [],
+    },
+    # ── Group 10: API fuzzing (needs OpenAPI spec) ────────────────
+    {
+        "name": "api-fuzzing",
+        "tools": ["restler"],
         "depends_on": ["recon"],
     },
 ]
@@ -151,6 +170,13 @@ TOOL_META: dict[str, dict] = {
     "xss-scanner":          {"profile": "python-scanners",  "requires": "target"},
     "api-discovery":        {"profile": "python-scanners",  "requires": "target"},
     "secret-leak":          {"profile": "python-scanners",  "requires": "target"},
+    "websocket-scanner":    {"profile": "python-scanners",  "requires": "target"},
+    "cache-deception":      {"profile": "python-scanners",  "requires": "target"},
+    "slowloris-check":      {"profile": "python-scanners",  "requires": "target"},
+    # Phase 3 — new tools
+    "smuggler":             {"profile": "web-advanced",     "requires": "target"},
+    "checkov":              {"profile": "iac",              "requires": "code"},
+    "restler":              {"profile": "api-fuzzing",      "requires": None, "file_requires": "configs/openapi.yaml"},
 }
 
 # CWE → downstream tool routing (conditional triggers)
@@ -158,6 +184,10 @@ CWE_TRIGGERS: dict[str, list[str]] = {
     "CWE-918": ["ssrf-scanner"],      # SSRF found → deep SSRF scan
     "CWE-79":  ["xss-scanner"],       # XSS found → deep XSS scan
     "CWE-89":  ["sqlmap"],            # SQLi found → SQLMap confirmation
+    "CWE-444": ["smuggler"],          # Smuggling indicators → deep smuggling test
+    "CWE-524": ["cache-deception"],   # Cache issues → cache deception test
+    "CWE-400": ["slowloris-check"],   # Resource issues → slowloris detection
+    "CWE-284": ["websocket-scanner"], # Access control → websocket auth check
 }
 
 # Tools that produce endpoints for downstream injection
