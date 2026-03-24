@@ -18,7 +18,13 @@ export SCAN_DATE
 export LLM_MODEL ?= gpt-3.5-turbo
 export LLM_TYPE ?= openai
 
-.PHONY: help setup run full dast sqli ssti dns sast secrets sca binary llm         zap-gui report summary defectdojo-import clean nuke
+.PHONY: help setup run full dast sqli ssti dns sast secrets sca binary llm \
+       recon fuzz waf tls cors network fingerprint api cloud \
+       xss jwt classic-scan oob amass-enum js-analysis dns-toolkit screenshot \
+       crlf ssrf container-lint frontend-sca log4shell osint openapi proto-pollution graphql-deep cms \
+       idor auth-bypass user-enum notif-inject redirect-cors oidc-audit bypass-403-adv ssrf-scan xss-scan api-discovery secret-leak python-scanners \
+       auth-extract auth-scan \
+       zap-gui report summary defectdojo-import clean nuke
 
 help: ## Show this help
 	@echo "Security All-in-One CWE — Bug Bounty Testing Suite"
@@ -71,6 +77,132 @@ binary: ## Binary analysis (cwe_checker) — BIN=path required
 
 llm: ## LLM prompt injection (garak) — LLM_MODEL + API key required
 	./runner.sh dummy --llm-model $(LLM_MODEL) --llm-type $(LLM_TYPE) --only garak
+
+# ── New tool targets ────────────────────────────────────
+recon: ## Recon scan (httpx + subfinder + naabu + katana) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only httpx,subfinder,naabu,katana
+
+fuzz: ## Directory/param fuzzing (ffuf + feroxbuster + arjun) — TARGET required
+	./runner.sh $(TARGET) --only ffuf,feroxbuster,arjun
+
+waf: ## WAF detection + bypass (wafw00f + bypass-403) — TARGET required
+	./runner.sh $(TARGET) --only wafw00f,bypass-403
+
+tls: ## TLS/SSL audit (testssl.sh) — TARGET required
+	./runner.sh $(TARGET) --only testssl
+
+cors: ## CORS misconfiguration scan (CORScanner) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only corscanner
+
+network: ## Network port scan (nmap) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only nmap
+
+fingerprint: ## Tech fingerprinting (WhatWeb) — TARGET required
+	./runner.sh $(TARGET) --only whatweb
+
+api: ## API scan (graphw00f GraphQL) — TARGET required
+	./runner.sh $(TARGET) --only graphw00f
+
+cloud: ## Cloud storage enum (cloud_enum) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only cloud-enum
+
+# ── New Round 2 tool targets ────────────────────────────
+xss: ## XSS scan (Dalfox) — TARGET required
+	./runner.sh $(TARGET) --only dalfox
+
+jwt: ## JWT token testing (jwt_tool) — JWT_TOKEN env required
+	./runner.sh $(TARGET) --only jwt-tool
+
+classic-scan: ## Classic web scan (Nikto) — TARGET required
+	./runner.sh $(TARGET) --only nikto
+
+oob: ## Out-of-band interaction (Interactsh)
+	./runner.sh $(TARGET) --only interactsh
+
+amass-enum: ## OWASP Amass subdomain enum — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only amass
+
+js-analysis: ## JavaScript secret extraction (JSLuice) — TARGET required
+	./runner.sh $(TARGET) --only jsluice
+
+dns-toolkit: ## DNS toolkit (DNSx) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only dnsx
+
+screenshot: ## Web screenshot (Gowitness) — TARGET required
+	./runner.sh $(TARGET) --only gowitness
+
+crlf: ## CRLF injection scan (CRLFuzz) — TARGET required
+	./runner.sh $(TARGET) --only crlfuzz
+
+ssrf: ## SSRF exploitation (SSRFmap) — TARGET required
+	./runner.sh $(TARGET) --only ssrfmap
+
+container-lint: ## Container best practices (Dockle) — IMAGE required
+	./runner.sh dummy --image $(IMAGE) --only dockle
+
+frontend-sca: ## Frontend JS SCA (RetireJS) — CODE=path required
+	./runner.sh dummy --code $(CODE) --only retirejs
+
+log4shell: ## Log4Shell detection (log4j-scan) — TARGET required
+	./runner.sh $(TARGET) --only log4j-scan
+
+osint: ## OSINT harvesting (theHarvester) — DOMAIN required
+	./runner.sh $(TARGET) --domain $(DOMAIN) --only theharvester
+
+openapi: ## OpenAPI spec audit (Cherrybomb) — needs reports/cherrybomb/openapi.json
+	./runner.sh $(TARGET) --only cherrybomb
+
+proto-pollution: ## Prototype pollution scan (ppmap) — TARGET required
+	./runner.sh $(TARGET) --only ppmap
+
+graphql-deep: ## GraphQL deep scan (Clairvoyance) — TARGET required
+	./runner.sh $(TARGET) --only clairvoyance
+
+cms: ## CMS detection + vulns (CMSeeK) — TARGET required
+	./runner.sh $(TARGET) --only cmseek
+
+# ── Python Scanners ─────────────────────────────────────
+idor: ## IDOR scanner (CWE-639) — TARGET + AUTH_TOKEN required
+	./runner.sh $(TARGET) --only idor-scanner
+
+auth-bypass: ## Auth bypass scanner (CWE-287/284/915) — TARGET required
+	./runner.sh $(TARGET) --only auth-bypass
+
+user-enum: ## User enumeration (CWE-203/204) — TARGET required
+	./runner.sh $(TARGET) --only user-enum
+
+notif-inject: ## Notification injection (CWE-74/79/93) — TARGET + AUTH_TOKEN required
+	./runner.sh $(TARGET) --only notif-inject
+
+redirect-cors: ## Open redirect + CORS (CWE-601/942) — TARGET required
+	./runner.sh $(TARGET) --only redirect-cors
+
+oidc-audit: ## OIDC/Keycloak audit (CWE-200/287/522) — TARGET required
+	./runner.sh $(TARGET) --only oidc-audit
+
+python-scanners: ## Run ALL Python scanners — TARGET + AUTH_TOKEN required
+	./runner.sh $(TARGET) --only idor-scanner --only auth-bypass --only user-enum --only notif-inject --only redirect-cors --only oidc-audit --only bypass-403-advanced --only ssrf-scanner --only xss-scanner --only api-discovery --only secret-leak
+
+bypass-403-adv: ## 403 bypass + RPC discovery (CWE-284) — TARGET required
+	./runner.sh $(TARGET) --only bypass-403-advanced
+
+ssrf-scan: ## SSRF scanner (CWE-918) — TARGET required
+	./runner.sh $(TARGET) --only ssrf-scanner
+
+xss-scan: ## XSS scanner (CWE-79/693/1336) — TARGET + AUTH_TOKEN required
+	./runner.sh $(TARGET) --only xss-scanner
+
+api-discovery: ## API discovery (CWE-200/540) — JS bundles + endpoint enum — TARGET required
+	./runner.sh $(TARGET) --only api-discovery
+
+secret-leak: ## Secret leak scanner (CWE-312/540/615) — response + JS secrets — TARGET required
+	./runner.sh $(TARGET) --only secret-leak
+
+auth-extract: ## Launch Chrome (clean profile) + extract auth → auth.env
+	python3 tools/python-scanners/auth_extractor.py --target $(TARGET) --output auth.env --json --launch-chrome --wait-login
+
+auth-scan: ## Extract auth + run ALL Python scanners (one-shot)
+	./runner.sh $(TARGET) --auto-auth
 
 # ── Reporting ───────────────────────────────────────────
 zap-gui: ## Launch ZAP GUI (port 8080)

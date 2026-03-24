@@ -1,0 +1,12 @@
+# OIDC Audit Scanner Configuration
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Custom OIDC discovery paths
+# oidc_paths:
+#   - "/.well-known/openid-configuration"
+#   - "/auth/realms/myrealm/.well-known/openid-configuration"
+
+# Additional client IDs to enumerate
+# client_ids:
+#   - "my-app"
+#   - "internal-service"

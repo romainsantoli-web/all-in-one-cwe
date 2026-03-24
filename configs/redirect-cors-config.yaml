@@ -1,0 +1,12 @@
+# Redirect & CORS Scanner Configuration
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Custom redirect endpoints
+# redirect_endpoints:
+#   - path: "/custom-login"
+#     params: ["next", "return_to", "redirect"]
+
+# Custom CORS-sensitive API paths
+# cors_targets:
+#   - "/api/users/me"
+#   - "/api/private"

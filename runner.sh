@@ -15,6 +15,9 @@
 #   --rate-limit <n>        Nuclei rate limit (default: 50)
 #   --skip <tools>          Comma-separated list of tools to skip
 #   --only <tools>          Comma-separated list of tools to run (exclusive)
+#   --auth-file <path>      Path to auth.env (auto-sourced before scanning)
+#   --auto-auth             Extract auth from Chrome CDP before scanning
+#   --cdp-port <port>       Chrome CDP port (default: 9222)
 #   --defectdojo            Start DefectDojo and import results
 #   --full                  Run extended scans (slower but more thorough)
 #   -h, --help              Show this help
@@ -33,7 +36,7 @@ banner() {
     echo -e "${CYAN}"
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║        🛡️  Security All-in-One CWE Scanner  🛡️              ║"
-    echo "║        Covering 95+ CWEs across 15 tools                   ║"
+    echo "║        Covering 150+ CWEs across 48 tools                  ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -64,6 +67,9 @@ SKIP=""
 ONLY=""
 DEFECTDOJO=false
 FULL=false
+AUTH_FILE=""
+AUTO_AUTH=false
+CDP_PORT=9222
 SCAN_DATE=$(date +%Y%m%d-%H%M%S)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -82,6 +88,9 @@ while [[ $# -gt 0 ]]; do
         --rate-limit)   RATE_LIMIT="$2"; shift 2 ;;
         --skip)         SKIP="$2"; shift 2 ;;
         --only)         ONLY="$2"; shift 2 ;;
+        --auth-file)    AUTH_FILE="$2"; shift 2 ;;
+        --auto-auth)    AUTO_AUTH=true; shift ;;
+        --cdp-port)     CDP_PORT="$2"; shift 2 ;;
         --defectdojo)   DEFECTDOJO=true; shift ;;
         --full)         FULL=true; shift ;;
         -*)             error "Unknown option: $1"; usage ;;
@@ -122,7 +131,7 @@ export BIN_DIR="${BIN_DIR:-.}"
 export IMAGE="${IMAGE:-alpine:latest}"
 
 cd "$SCRIPT_DIR"
-mkdir -p reports/{nuclei,zap,sqlmap,semgrep,gitleaks,trufflehog,trivy,cwe-checker,cve-bin-tool,garak,dnsreaper,subdominator,dependency-check,sstimap}
+mkdir -p reports/{nuclei,zap,sqlmap,semgrep,gitleaks,trufflehog,trivy,cwe-checker,cve-bin-tool,garak,dnsreaper,subdominator,dependency-check,sstimap,httpx,subfinder,naabu,katana,ffuf,feroxbuster,arjun,wafw00f,bypass-403,testssl,corscanner,nmap,whatweb,graphw00f,cloud-enum,dalfox,interactsh,nikto,jwt-tool,amass,jsluice,dnsx,gowitness,crlfuzz,ssrfmap,dockle,retirejs,log4j-scan,theharvester,cherrybomb,ppmap,clairvoyance,cmseek,idor-scanner,auth-bypass,user-enum,notif-inject,redirect-cors,oidc-audit,bypass-403-advanced,ssrf-scanner,xss-scanner,api-discovery,secret-leak}
 
 banner
 info "Scan started at $(date)"
@@ -138,7 +147,16 @@ run_tool() {
     local name="$1"
     local service="$2"
     shift 2
-    local extra_args=("$@")
+    local profile_args=()
+    local extra_args=()
+
+    # Separate --profile from other args
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --profile) profile_args+=(--profile "$2"); shift 2 ;;
+            *)         extra_args+=("$1"); shift ;;
+        esac
+    done
 
     if ! should_run "$name"; then
         info "Skipping $name (filtered)"
@@ -148,7 +166,7 @@ run_tool() {
     header "$name"
     log "Starting $name..."
 
-    if docker compose run --rm "${extra_args[@]}" "$service" 2>&1; then
+    if docker compose ${profile_args[@]+"${profile_args[@]}"} run --rm ${extra_args[@]+"${extra_args[@]}"} "$service" 2>&1; then
         log "$name completed successfully ✓"
         RESULTS+=("$name")
     else
@@ -228,7 +246,200 @@ else
     fi
 fi
 
-# ── 8. Report Merge ─────────────────────────────────────────
+# ── 8. Recon — Subdomain & HTTP probing ─────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "subfinder" "subfinder"
+fi
+
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "httpx" "httpx" --profile recon
+    run_tool "naabu" "naabu" --profile recon
+fi
+
+if [[ -n "$TARGET" ]]; then
+    run_tool "katana" "katana" --profile recon
+fi
+
+# ── 9. WAF Fingerprinting ───────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "wafw00f" "wafw00f"
+    run_tool "bypass-403" "bypass-403" --profile waf
+fi
+
+# ── 10. Fuzzing — Directory & Parameter ──────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "ffuf" "ffuf" --profile fuzz
+    run_tool "feroxbuster" "feroxbuster" --profile fuzz
+    run_tool "arjun" "arjun"
+fi
+
+# ── 11. TLS/SSL Audit ───────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "testssl" "testssl"
+fi
+
+# ── 12. CORS Misconfiguration ───────────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "corscanner" "corscanner"
+fi
+
+# ── 13. Network — Port Scanning ─────────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "nmap" "nmap" --profile network
+fi
+
+# ── 14. Tech Fingerprinting ─────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "whatweb" "whatweb"
+fi
+
+# ── 15. API Scanning ────────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "graphw00f" "graphw00f"
+fi
+
+# ── 16. Cloud Storage Enumeration ────────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "cloud-enum" "cloud-enum"
+fi
+
+# ── 17. XSS Scanning ────────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "dalfox" "dalfox" --profile xss
+fi
+
+# ── 18. Out-of-Band (OOB) Interaction ───────────────────────
+if should_run "interactsh"; then
+    run_tool "interactsh" "interactsh" --profile oob
+fi
+
+# ── 19. Classic Web Scanner ─────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "nikto" "nikto"
+fi
+
+# ── 20. JWT Token Testing ───────────────────────────────────
+if should_run "jwt-tool" && [[ -n "${JWT_TOKEN:-}" ]]; then
+    run_tool "jwt-tool" "jwt-tool" --profile jwt
+else
+    if should_run "jwt-tool"; then
+        info "Skipping jwt-tool — no JWT_TOKEN set"
+    fi
+fi
+
+# ── 21. OWASP Amass — Subdomain Enumeration ─────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "amass" "amass"
+fi
+
+# ── 22. JavaScript Analysis ─────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "jsluice" "jsluice" --profile js
+fi
+
+# ── 23. DNS Toolkit ─────────────────────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "dnsx" "dnsx"
+fi
+
+# ── 24. Screenshot / Visual Recon ────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "gowitness" "gowitness" --profile screenshot
+fi
+
+# ── 25. CRLF Injection ──────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "crlfuzz" "crlfuzz"
+fi
+
+# ── 26. SSRF Exploitation ───────────────────────────────────
+if should_run "ssrfmap"; then
+    run_tool "ssrfmap" "ssrfmap" --profile ssrf
+fi
+
+# ── 27. Container Security Lint ──────────────────────────────
+if [[ -n "$IMAGE" && "$IMAGE" != "alpine:latest" ]]; then
+    run_tool "dockle" "dockle" --profile container
+fi
+
+# ── 28. Frontend SCA (RetireJS) ──────────────────────────────
+if [[ -d "$CODE" && "$CODE" != "." ]]; then
+    run_tool "retirejs" "retirejs" --profile frontend-sca
+fi
+
+# ── 29. Log4Shell Detection ─────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "log4j-scan" "log4j-scan"
+fi
+
+# ── 30. OSINT — theHarvester ─────────────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "theharvester" "theharvester" --profile osint
+fi
+
+# ── 31. OpenAPI Audit ────────────────────────────────────────
+if should_run "cherrybomb" && [[ -f "reports/cherrybomb/openapi.json" ]]; then
+    run_tool "cherrybomb" "cherrybomb" --profile openapi
+else
+    if should_run "cherrybomb"; then
+        info "Skipping cherrybomb — no openapi.json in reports/cherrybomb/"
+    fi
+fi
+
+# ── 32. Prototype Pollution ──────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "ppmap" "ppmap" --profile prototype
+fi
+
+# ── 33. GraphQL Deep Scan ────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "clairvoyance" "clairvoyance" --profile graphql
+fi
+
+# ── 34. CMS Detection ───────────────────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "cmseek" "cmseek" --profile cms
+fi
+
+# ── 35a. Auth Extraction (optional) ──────────────────────────────────
+if [[ "$AUTO_AUTH" == true && -n "$TARGET" ]]; then
+    header "Auth Extraction (CDP)"
+    log "Launching Chrome with clean profile + extracting auth tokens..."
+    if python3 tools/python-scanners/auth_extractor.py \
+        --target "$TARGET" --output auth.env --cdp-port "$CDP_PORT" \
+        --launch-chrome --wait-login --kill-chrome 2>&1; then
+        AUTH_FILE="auth.env"
+        log "Auth extraction successful ✓"
+    else
+        warn "Auth extraction failed — scanners will run without auth"
+    fi
+fi
+
+# Source auth.env if available
+if [[ -n "$AUTH_FILE" && -f "$AUTH_FILE" ]]; then
+    log "Sourcing auth from $AUTH_FILE"
+    set -a
+    # shellcheck disable=SC1090
+    source "$AUTH_FILE"
+    set +a
+fi
+
+# ── 35b. Python Scanners — IDOR / Auth / Enum / Inject / CORS / OIDC ──
+if [[ -n "$TARGET" ]]; then
+    run_tool "idor-scanner" "idor-scanner" --profile python-scanners
+    run_tool "auth-bypass" "auth-bypass" --profile python-scanners
+    run_tool "user-enum" "user-enum" --profile python-scanners
+    run_tool "notif-inject" "notif-inject" --profile python-scanners
+    run_tool "redirect-cors" "redirect-cors" --profile python-scanners
+    run_tool "oidc-audit" "oidc-audit" --profile python-scanners
+    run_tool "bypass-403-advanced" "bypass-403-advanced" --profile python-scanners
+    run_tool "ssrf-scanner" "ssrf-scanner" --profile python-scanners
+    run_tool "xss-scanner" "xss-scanner" --profile python-scanners
+    run_tool "api-discovery" "api-discovery" --profile python-scanners
+    run_tool "secret-leak" "secret-leak" --profile python-scanners
+fi
+
+# ── 36. Report Merge ────────────────────────────────────────
 header "Report Generation"
 log "Merging reports..."
 if [[ -f scripts/merge-reports.py ]]; then
@@ -242,7 +453,7 @@ if [[ -f scripts/cwe-summary.py ]]; then
         warn "CWE summary failed (non-critical)"
 fi
 
-# ── 9. DefectDojo Import ────────────────────────────────────
+# ── 18. DefectDojo Import ───────────────────────────────────
 if $DEFECTDOJO; then
     header "DefectDojo"
     log "Starting DefectDojo..."

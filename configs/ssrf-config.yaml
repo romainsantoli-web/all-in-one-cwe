@@ -1,0 +1,22 @@
+# SSRF Scanner Configuration
+# ===========================
+# Uncomment and customize sections as needed.
+
+# Callback URL for out-of-band SSRF detection
+# (Burp Collaborator / interactsh / webhook.site):
+# callback_url: https://your-callback.oastify.com
+
+# Endpoints to test (override defaults):
+# endpoints:
+#   - path: /api/settings
+#     method: POST
+#     param_type: json
+#   - path: /api/webhooks
+#     method: POST
+#     param_type: json
+#   - path: /api/upload
+#     method: POST
+#     param_type: json
+#   - path: /api/proxy
+#     method: GET
+#     param_type: query

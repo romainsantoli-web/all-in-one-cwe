@@ -1,0 +1,16 @@
+# Auth Bypass Scanner Configuration
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Additional admin paths to probe (merged with defaults)
+# admin_paths:
+#   - "/custom-admin"
+#   - "/api/internal/debug"
+
+# Additional mass assignment endpoints
+# update_endpoints:
+#   - "/api/users/me"
+#   - "/api/account/settings"
+
+# OAuth authorization endpoints
+# oauth_paths:
+#   - "/oauth/authorize"

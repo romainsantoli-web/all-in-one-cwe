@@ -9,6 +9,8 @@ reports/**/*.xml
 # Environment
 .env
 .env.local
+auth.env
+auth.env.json
 
 # Docker
 .docker/

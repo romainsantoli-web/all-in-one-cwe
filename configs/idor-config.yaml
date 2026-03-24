@@ -1,0 +1,19 @@
+# IDOR Scanner Configuration
+# Customize endpoint patterns for your target application.
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Test IDs to probe (sequential / common)
+test_ids:
+  - "1"
+  - "2"
+  - "100"
+  - "1000"
+  - "99999"
+
+# IDOR target definitions — customize paths for your app
+# idor_targets:
+#   - name: "Custom Resource"
+#     paths: ["/api/custom/{id}"]
+#     severity: high
+#     cwe: "CWE-639"
+#     pii_keywords: [email, phone, name]

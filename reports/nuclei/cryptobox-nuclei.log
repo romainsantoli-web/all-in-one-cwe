@@ -1,0 +1,161 @@
+ Container security-all-in-one-cwe-nuclei-run-17ace1ea5662 Creating 
+ Container security-all-in-one-cwe-nuclei-run-17ace1ea5662 Created 
+
+                     __     _
+   ____  __  _______/ /__  (_)
+  / __ \/ / / / ___/ / _ \/ /
+ / / / / /_/ / /__/ /  __/ /
+/_/ /_/\__,_/\___/_/\___/_/   v3.7.1
+
+		projectdiscovery.io
+
+[[34mINF[0m] nuclei-templates are not installed, installing...
+[[34mINF[0m] Successfully installed nuclei-templates at /root/nuclei-templates
+[[31mWRN[0m] Found 7 templates with runtime error (use -validate flag for further examination)
+[[34mINF[0m] Current nuclei version: v3.7.1 ([92mlatest[0m)
+[[34mINF[0m] Current nuclei-templates version: v10.4.0 ([92mlatest[0m)
+[[34mINF[0m] New templates added in latest release: 94
+[[34mINF[0m] Templates loaded for current scan: 6382
+[[34mINF[0m] Executing 6380 signed templates from projectdiscovery/nuclei-templates
+[[34mINF[0m] Targets loaded for current scan: 1
+[[93mWRN[0m] Loading 2 unsigned templates for scan. Use with caution.
+[[34mINF[0m] Templates clustered: 447 (Reduced 385 Requests)
+{"duration":"0:00:05","errors":"0","hosts":"1","matched":"0","percent":"0","requests":"132","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:10","errors":"0","hosts":"1","matched":"0","percent":"1","requests":"276","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+[[34mINF[0m] Using Interactsh Server: oast.site
+{"duration":"0:00:15","errors":"0","hosts":"1","matched":"0","percent":"3","requests":"439","rps":"28","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:20","errors":"0","hosts":"1","matched":"0","percent":"3","requests":"542","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:25","errors":"0","hosts":"1","matched":"0","percent":"4","requests":"687","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:30","errors":"0","hosts":"1","matched":"0","percent":"6","requests":"1021","rps":"33","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:35","errors":"0","hosts":"1","matched":"0","percent":"8","requests":"1173","rps":"33","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:40","errors":"0","hosts":"1","matched":"0","percent":"8","requests":"1309","rps":"32","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:45","errors":"0","hosts":"1","matched":"0","percent":"9","requests":"1424","rps":"31","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:50","errors":"0","hosts":"1","matched":"0","percent":"10","requests":"1540","rps":"30","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:00:55","errors":"0","hosts":"1","matched":"0","percent":"11","requests":"1698","rps":"30","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:00","errors":"5","hosts":"1","matched":"0","percent":"12","requests":"1841","rps":"30","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:05","errors":"5","hosts":"1","matched":"0","percent":"13","requests":"1969","rps":"30","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:10","errors":"5","hosts":"1","matched":"0","percent":"14","requests":"2101","rps":"29","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:15","errors":"6","hosts":"1","matched":"0","percent":"15","requests":"2261","rps":"30","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:20","errors":"6","hosts":"1","matched":"0","percent":"16","requests":"2343","rps":"29","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:25","errors":"6","hosts":"1","matched":"0","percent":"16","requests":"2343","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:30","errors":"7","hosts":"1","matched":"0","percent":"16","requests":"2458","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:35","errors":"7","hosts":"1","matched":"0","percent":"17","requests":"2610","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:40","errors":"7","hosts":"1","matched":"0","percent":"18","requests":"2771","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:45","errors":"7","hosts":"1","matched":"0","percent":"19","requests":"2913","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:50","errors":"7","hosts":"1","matched":"0","percent":"21","requests":"3078","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:01:55","errors":"7","hosts":"1","matched":"0","percent":"21","requests":"3213","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:00","errors":"7","hosts":"1","matched":"0","percent":"23","requests":"3365","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:05","errors":"7","hosts":"1","matched":"0","percent":"23","requests":"3495","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:10","errors":"7","hosts":"1","matched":"0","percent":"24","requests":"3638","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:15","errors":"9","hosts":"1","matched":"0","percent":"25","requests":"3786","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:20","errors":"10","hosts":"1","matched":"0","percent":"27","requests":"3960","rps":"28","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:25","errors":"11","hosts":"1","matched":"0","percent":"27","requests":"4007","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:30","errors":"11","hosts":"1","matched":"0","percent":"27","requests":"4007","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:35","errors":"11","hosts":"1","matched":"0","percent":"28","requests":"4190","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:40","errors":"11","hosts":"1","matched":"0","percent":"29","requests":"4325","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:45","errors":"11","hosts":"1","matched":"0","percent":"30","requests":"4504","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:50","errors":"11","hosts":"1","matched":"0","percent":"31","requests":"4658","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:02:55","errors":"11","hosts":"1","matched":"0","percent":"32","requests":"4799","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:00","errors":"11","hosts":"1","matched":"0","percent":"33","requests":"4943","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:05","errors":"13","hosts":"1","matched":"0","percent":"34","requests":"5090","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:10","errors":"14","hosts":"1","matched":"0","percent":"35","requests":"5238","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:15","errors":"14","hosts":"1","matched":"0","percent":"36","requests":"5367","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:20","errors":"14","hosts":"1","matched":"0","percent":"38","requests":"5559","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:25","errors":"14","hosts":"1","matched":"0","percent":"38","requests":"5559","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:30","errors":"14","hosts":"1","matched":"0","percent":"39","requests":"5751","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:35","errors":"15","hosts":"1","matched":"0","percent":"39","requests":"5831","rps":"27","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:40","errors":"15","hosts":"1","matched":"0","percent":"40","requests":"5942","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:45","errors":"15","hosts":"1","matched":"0","percent":"41","requests":"6057","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:50","errors":"15","hosts":"1","matched":"0","percent":"42","requests":"6162","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:03:55","errors":"15","hosts":"1","matched":"0","percent":"42","requests":"6256","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:00","errors":"15","hosts":"1","matched":"0","percent":"43","requests":"6317","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:05","errors":"15","hosts":"1","matched":"0","percent":"43","requests":"6349","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:10","errors":"15","hosts":"1","matched":"0","percent":"43","requests":"6421","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:15","errors":"15","hosts":"1","matched":"0","percent":"44","requests":"6554","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:20","errors":"30","hosts":"1","matched":"0","percent":"45","requests":"6700","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:25","errors":"30","hosts":"1","matched":"0","percent":"46","requests":"6855","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:30","errors":"30","hosts":"1","matched":"0","percent":"48","requests":"7035","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:35","errors":"30","hosts":"1","matched":"0","percent":"48","requests":"7161","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:40","errors":"30","hosts":"1","matched":"0","percent":"49","requests":"7184","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:45","errors":"30","hosts":"1","matched":"0","percent":"49","requests":"7219","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:50","errors":"30","hosts":"1","matched":"0","percent":"50","requests":"7413","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:04:55","errors":"30","hosts":"1","matched":"0","percent":"51","requests":"7568","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:00","errors":"30","hosts":"1","matched":"0","percent":"52","requests":"7620","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:05","errors":"30","hosts":"1","matched":"0","percent":"52","requests":"7714","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+[[34mINF[0m] Skipped bounty.cryptobox.com:443 from target list as found unresponsive permanently: cause="i/o timeout" address=bounty.cryptobox.com:443
+[[34mINF[0m] Skipped bounty.cryptobox.com:443 from target list as found unresponsive permanently: cause="i/o timeout" address=bounty.cryptobox.com:443
+{"duration":"0:05:10","errors":"37","hosts":"1","matched":"0","percent":"53","requests":"7790","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:15","errors":"45","hosts":"1","matched":"0","percent":"54","requests":"7924","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:20","errors":"45","hosts":"1","matched":"0","percent":"54","requests":"8027","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:25","errors":"46","hosts":"1","matched":"0","percent":"56","requests":"8236","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:30","errors":"46","hosts":"1","matched":"0","percent":"56","requests":"8281","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:35","errors":"46","hosts":"1","matched":"0","percent":"61","requests":"8933","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:40","errors":"46","hosts":"1","matched":"0","percent":"61","requests":"9055","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:45","errors":"46","hosts":"1","matched":"0","percent":"62","requests":"9163","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:50","errors":"46","hosts":"1","matched":"0","percent":"63","requests":"9210","rps":"26","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:05:55","errors":"46","hosts":"1","matched":"0","percent":"63","requests":"9210","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:00","errors":"46","hosts":"1","matched":"0","percent":"63","requests":"9349","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:05","errors":"46","hosts":"1","matched":"0","percent":"64","requests":"9492","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:10","errors":"50","hosts":"1","matched":"0","percent":"65","requests":"9547","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:15","errors":"50","hosts":"1","matched":"0","percent":"65","requests":"9547","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:20","errors":"50","hosts":"1","matched":"0","percent":"65","requests":"9589","rps":"25","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:25","errors":"51","hosts":"1","matched":"0","percent":"65","requests":"9598","rps":"24","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:30","errors":"51","hosts":"1","matched":"0","percent":"65","requests":"9599","rps":"24","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:35","errors":"52","hosts":"1","matched":"0","percent":"65","requests":"9607","rps":"24","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:40","errors":"67","hosts":"1","matched":"0","percent":"65","requests":"9625","rps":"24","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:45","errors":"84","hosts":"1","matched":"0","percent":"66","requests":"9649","rps":"23","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:50","errors":"89","hosts":"1","matched":"0","percent":"66","requests":"9655","rps":"23","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:06:55","errors":"110","hosts":"1","matched":"0","percent":"66","requests":"9678","rps":"23","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:00","errors":"126","hosts":"1","matched":"0","percent":"66","requests":"9694","rps":"23","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:05","errors":"136","hosts":"1","matched":"0","percent":"66","requests":"9704","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:10","errors":"142","hosts":"1","matched":"0","percent":"66","requests":"9776","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:15","errors":"147","hosts":"1","matched":"0","percent":"67","requests":"9881","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:20","errors":"147","hosts":"1","matched":"0","percent":"68","requests":"9982","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:25","errors":"147","hosts":"1","matched":"0","percent":"68","requests":"10081","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:30","errors":"147","hosts":"1","matched":"0","percent":"69","requests":"10181","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:35","errors":"147","hosts":"1","matched":"0","percent":"70","requests":"10279","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:40","errors":"147","hosts":"1","matched":"0","percent":"70","requests":"10362","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:45","errors":"149","hosts":"1","matched":"0","percent":"71","requests":"10463","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:50","errors":"151","hosts":"1","matched":"0","percent":"72","requests":"10571","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:07:55","errors":"151","hosts":"1","matched":"0","percent":"73","requests":"10671","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:00","errors":"151","hosts":"1","matched":"0","percent":"73","requests":"10713","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:05","errors":"151","hosts":"1","matched":"0","percent":"73","requests":"10713","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:10","errors":"151","hosts":"1","matched":"0","percent":"74","requests":"10820","rps":"22","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:15","errors":"151","hosts":"1","matched":"0","percent":"74","requests":"10852","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:20","errors":"151","hosts":"1","matched":"0","percent":"74","requests":"10869","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:25","errors":"151","hosts":"1","matched":"0","percent":"74","requests":"10899","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:30","errors":"151","hosts":"1","matched":"0","percent":"74","requests":"10941","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:35","errors":"151","hosts":"1","matched":"0","percent":"75","requests":"11023","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:40","errors":"151","hosts":"1","matched":"0","percent":"75","requests":"11092","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:45","errors":"151","hosts":"1","matched":"0","percent":"76","requests":"11196","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:50","errors":"151","hosts":"1","matched":"0","percent":"76","requests":"11238","rps":"21","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:08:55","errors":"151","hosts":"1","matched":"0","percent":"76","requests":"11238","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:00","errors":"151","hosts":"1","matched":"0","percent":"77","requests":"11284","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:05","errors":"151","hosts":"1","matched":"0","percent":"77","requests":"11284","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:10","errors":"151","hosts":"1","matched":"0","percent":"77","requests":"11394","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:15","errors":"151","hosts":"1","matched":"0","percent":"78","requests":"11491","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:20","errors":"151","hosts":"1","matched":"0","percent":"79","requests":"11593","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:25","errors":"151","hosts":"1","matched":"0","percent":"80","requests":"11694","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:30","errors":"151","hosts":"1","matched":"0","percent":"80","requests":"11794","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:35","errors":"151","hosts":"1","matched":"0","percent":"81","requests":"11894","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:40","errors":"151","hosts":"1","matched":"0","percent":"81","requests":"11954","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:45","errors":"151","hosts":"1","matched":"0","percent":"82","requests":"11993","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:50","errors":"151","hosts":"1","matched":"0","percent":"82","requests":"12094","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:09:55","errors":"151","hosts":"1","matched":"0","percent":"83","requests":"12194","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:00","errors":"151","hosts":"1","matched":"0","percent":"84","requests":"12294","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:05","errors":"151","hosts":"1","matched":"0","percent":"84","requests":"12394","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:10","errors":"151","hosts":"1","matched":"0","percent":"85","requests":"12440","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:15","errors":"151","hosts":"1","matched":"0","percent":"85","requests":"12440","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:20","errors":"151","hosts":"1","matched":"0","percent":"85","requests":"12551","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:25","errors":"151","hosts":"1","matched":"0","percent":"86","requests":"12650","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:30","errors":"151","hosts":"1","matched":"0","percent":"87","requests":"12744","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+[[34mINF[0m] Skipped bounty.cryptobox.com:4040 from target list as found unresponsive permanently: cause="port closed or filtered" address=bounty.cryptobox.com:4040 chain="connection refused; got err while executing https://bounty.cryptobox.com:4040/jobs/"
+{"duration":"0:10:35","errors":"151","hosts":"1","matched":"0","percent":"87","requests":"12849","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:40","errors":"151","hosts":"1","matched":"0","percent":"88","requests":"12945","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:45","errors":"151","hosts":"1","matched":"0","percent":"89","requests":"13045","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:50","errors":"151","hosts":"1","matched":"0","percent":"89","requests":"13150","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:10:55","errors":"151","hosts":"1","matched":"0","percent":"90","requests":"13250","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:11:00","errors":"151","hosts":"1","matched":"0","percent":"91","requests":"13318","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+{"duration":"0:11:04","errors":"151","hosts":"1","matched":"0","percent":"91","requests":"13318","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}
+[[34mINF[0m] Scan completed in 11m. 0 matches found.
+{"duration":"0:11:04","errors":"151","hosts":"1","matched":"0","percent":"91","requests":"13318","rps":"20","startedAt":"2026-03-24T09:52:35.78809942Z","templates":"6382","total":"14616"}

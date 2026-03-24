@@ -1,0 +1,21 @@
+# API Discovery Scanner Configuration
+# ====================================
+# Uncomment and customize sections as needed.
+
+# Seed pages to crawl for JS references (override defaults):
+# seed_paths:
+#   - /
+#   - /login
+#   - /app
+#   - /dashboard
+#   - /patient     # Doctolib-specific
+#   - /booking     # Doctolib-specific
+
+# Additional API paths to probe (appended to defaults):
+# api_paths:
+#   - /api/v1/health
+#   - /api/v1/config
+#   - /internal/api
+
+# Max JS bundles to download and analyze:
+# max_bundles: 50

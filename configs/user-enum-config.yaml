@@ -1,0 +1,15 @@
+# User Enumeration Scanner Configuration
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Known-nonexistent emails for baseline comparison
+# fake_emails:
+#   - "definitely-not-real-1@fakemail.test"
+#   - "definitely-not-real-2@fakemail.test"
+
+# Custom login endpoints
+# login_endpoints:
+#   - "/api/auth/login"
+
+# Custom password reset endpoints
+# reset_endpoints:
+#   - "/api/password/reset"

@@ -30,9 +30,9 @@ services:
       - "/custom-templates/"
       - "-severity"
       - "info,low,medium,high,critical"
-      - "-json"
+      - "-jsonl"
       - "-o"
-      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "/output/scan-${SCAN_DATE:-latest}.jsonl"
       - "-rate-limit"
       - "${RATE_LIMIT:-50}"
       - "-bulk-size"
@@ -54,13 +54,47 @@ services:
       - "${TARGET:-https://example.com}"
       - "-severity"
       - "info,low,medium,high,critical"
-      - "-json"
+      - "-jsonl"
       - "-o"
-      - "/output/full-scan-${SCAN_DATE:-latest}.json"
+      - "/output/full-scan-${SCAN_DATE:-latest}.jsonl"
       - "-rate-limit"
       - "${RATE_LIMIT:-50}"
       - "-stats"
     profiles: ["full"]
+
+  # Nuclei subdomain scan (scan list of subdomains)
+  nuclei-subs:
+    <<: *common
+    image: projectdiscovery/nuclei:latest
+    volumes:
+      - ./reports/nuclei:/output
+      - ./reports/subdominator:/targets:ro
+      - ./custom-rules/nuclei:/custom-templates:ro
+    entrypoint: ["nuclei"]
+    command:
+      - "-l"
+      - "/targets/high-value-targets.txt"
+      - "-t"
+      - "/custom-templates/"
+      - "-severity"
+      - "info,low,medium,high,critical"
+      - "-jsonl"
+      - "-o"
+      - "/output/subs-scan-${SCAN_DATE:-latest}.jsonl"
+      - "-rate-limit"
+      - "${RATE_LIMIT:-30}"
+      - "-bulk-size"
+      - "10"
+      - "-concurrency"
+      - "5"
+      - "-timeout"
+      - "5"
+      - "-retries"
+      - "1"
+      - "-stats"
+      - "-stats-interval"
+      - "10"
+    profiles: ["subs"]
 
   # ============================================================
   # 2. DAST — OWASP ZAP (scanner interactif + automation)
@@ -125,10 +159,15 @@ services:
   # ============================================================
   sqlmap:
     <<: *common
-    image: paosin/sqlmap:latest
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir sqlmap
+        WORKDIR /app
     volumes:
       - ./reports/sqlmap:/output
-    entrypoint: ["python", "/sqlmap/sqlmap.py"]
+    entrypoint: ["sqlmap"]
     command:
       - "-u"
       - "${TARGET:-https://example.com}"
@@ -151,12 +190,13 @@ services:
       dockerfile_inline: |
         FROM python:3.11-slim
         RUN apt-get update && apt-get install -y --no-install-recommends git && \
-            pip install --no-cache-dir sstimap && \
+            git clone --depth 1 https://github.com/vladko312/SSTImap.git /opt/sstimap && \
+            pip install --no-cache-dir -r /opt/sstimap/requirements.txt && \
             apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-        WORKDIR /app
+        WORKDIR /opt/sstimap
     volumes:
       - ./reports/sstimap:/output
-    entrypoint: ["sstimap"]
+    entrypoint: ["python", "/opt/sstimap/sstimap.py"]
     command:
       - "-u"
       - "${TARGET:-https://example.com}"
@@ -187,7 +227,10 @@ services:
       context: .
       dockerfile_inline: |
         FROM python:3.11-slim
-        RUN pip install --no-cache-dir subdominator
+        RUN apt-get update && apt-get install -y --no-install-recommends \
+              libglib2.0-0 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libcairo2 libffi-dev shared-mime-info && \
+            pip install --no-cache-dir subdominator && \
+            apt-get clean && rm -rf /var/lib/apt/lists/*
         WORKDIR /app
     volumes:
       - ./reports/subdominator:/output
@@ -264,7 +307,7 @@ services:
   # ============================================================
   trivy:
     <<: *common
-    image: aquasecurity/trivy:latest
+    image: ghcr.io/aquasecurity/trivy:latest
     volumes:
       - ./reports/trivy:/output
       - ${CODE:-./tools}:/src:ro
@@ -280,7 +323,7 @@ services:
 
   trivy-image:
     <<: *common
-    image: aquasecurity/trivy:latest
+    image: ghcr.io/aquasecurity/trivy:latest
     volumes:
       - ./reports/trivy:/output
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -324,6 +367,7 @@ services:
   # ============================================================
   cwe-checker:
     <<: *common
+    platform: linux/amd64
     image: fkiecad/cwe_checker:latest
     volumes:
       - ./reports/cwe-checker:/output
@@ -366,7 +410,9 @@ services:
       context: .
       dockerfile_inline: |
         FROM python:3.11-slim
-        RUN pip install --no-cache-dir garak
+        RUN apt-get update && apt-get install -y --no-install-recommends gcc cargo rustc && \
+            pip install --no-cache-dir garak && \
+            apt-get purge -y gcc cargo rustc && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
         WORKDIR /app
     volumes:
       - ./reports/garak:/output
@@ -385,7 +431,802 @@ services:
       - "/output/scan-${SCAN_DATE:-latest}"
 
   # ============================================================
-  # 15. Reporting — DefectDojo (dashboard unifié)
+  # 15. Recon — httpx (HTTP probing, tech detection)
+  # Couvre: CWE-200 (information exposure), reconnaissance
+  # ============================================================
+  httpx:
+    <<: *common
+    image: projectdiscovery/httpx:latest
+    volumes:
+      - ./reports/httpx:/output
+      - ./reports/subdominator:/targets:ro
+    entrypoint: ["httpx"]
+    command:
+      - "-l"
+      - "/targets/scan-${SCAN_DATE:-latest}.txt"
+      - "-sc"
+      - "-td"
+      - "-title"
+      - "-server"
+      - "-ct"
+      - "-location"
+      - "-favicon"
+      - "-jarm"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "-threads"
+      - "25"
+    profiles: ["recon"]
+
+  # ============================================================
+  # 16. Recon — subfinder (passive subdomain enumeration)
+  # Couvre: Reconnaissance passive multi-source (40+ providers)
+  # ============================================================
+  subfinder:
+    <<: *common
+    image: projectdiscovery/subfinder:latest
+    volumes:
+      - ./reports/subfinder:/output
+    entrypoint: ["subfinder"]
+    command:
+      - "-d"
+      - "${DOMAIN:-example.com}"
+      - "-all"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+
+  # ============================================================
+  # 17. Recon — naabu (port scanning)
+  # Couvre: CWE-200,16 (service exposure, misconfig)
+  # ============================================================
+  naabu:
+    <<: *common
+    image: projectdiscovery/naabu:latest
+    volumes:
+      - ./reports/naabu:/output
+      - ./reports/subdominator:/targets:ro
+    entrypoint: ["naabu"]
+    command:
+      - "-list"
+      - "/targets/high-value-targets.txt"
+      - "-top-ports"
+      - "1000"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-rate"
+      - "${RATE_LIMIT:-50}"
+      - "-silent"
+    profiles: ["recon"]
+
+  # ============================================================
+  # 18. Recon — katana (web crawler / spider JS-aware)
+  # Couvre: CWE-200 (endpoint discovery, JS analysis)
+  # ============================================================
+  katana:
+    <<: *common
+    image: projectdiscovery/katana:latest
+    volumes:
+      - ./reports/katana:/output
+    entrypoint: ["katana"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-d"
+      - "3"
+      - "-jc"
+      - "-kf"
+      - "all"
+      - "-ef"
+      - "css,png,jpg,gif,svg,woff,woff2,ico"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "-concurrency"
+      - "10"
+    profiles: ["recon"]
+
+  # ============================================================
+  # 19. Fuzzing — ffuf (directory / parameter fuzzing)
+  # Couvre: CWE-200,538,548 (hidden endpoints, directory listing)
+  # ============================================================
+  ffuf:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.22-alpine AS build
+        RUN go install github.com/ffuf/ffuf/v2@latest
+        FROM alpine:3.20
+        COPY --from=build /go/bin/ffuf /usr/local/bin/ffuf
+        ENTRYPOINT ["ffuf"]
+    volumes:
+      - ./reports/ffuf:/output
+      - ./wordlists:/wordlists:ro
+    entrypoint: ["ffuf"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}/FUZZ"
+      - "-w"
+      - "/wordlists/dirs.txt"
+      - "-mc"
+      - "200,201,202,204,301,302,307,401,403,405,500"
+      - "-fc"
+      - "429"
+      - "-rate"
+      - "${RATE_LIMIT:-50}"
+      - "-json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-t"
+      - "10"
+    profiles: ["fuzz"]
+
+  # ============================================================
+  # 20. Fuzzing — feroxbuster (recursive directory brute-force)
+  # Couvre: CWE-200,538,548 (hidden endpoints, forced browsing)
+  # ============================================================
+  feroxbuster:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM rust:latest AS build
+        RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev && \
+            cargo install feroxbuster && \
+            rm -rf /var/lib/apt/lists/*
+        FROM debian:trixie-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+        COPY --from=build /usr/local/cargo/bin/feroxbuster /usr/local/bin/feroxbuster
+        ENTRYPOINT ["feroxbuster"]
+    volumes:
+      - ./reports/feroxbuster:/output
+      - ./wordlists:/wordlists:ro
+    entrypoint: ["feroxbuster"]
+    command:
+      - "--url"
+      - "${TARGET:-https://example.com}"
+      - "--wordlist"
+      - "/wordlists/dirs.txt"
+      - "--depth"
+      - "3"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--json"
+      - "--output"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "--status-codes"
+      - "200,201,204,301,302,307,401,403,405,500"
+      - "--threads"
+      - "10"
+      - "--insecure"
+    profiles: ["fuzz"]
+
+  # ============================================================
+  # 21. Fuzzing — arjun (hidden HTTP parameter discovery)
+  # Couvre: CWE-200,915 (mass assignment, hidden params)
+  # ============================================================
+  arjun:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir arjun
+        WORKDIR /app
+    volumes:
+      - ./reports/arjun:/output
+    entrypoint: ["arjun"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-oJ"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "-t"
+      - "5"
+
+  # ============================================================
+  # 22. WAF — wafw00f (WAF fingerprinting)
+  # Couvre: Reconnaissance (identify WAF/CDN before testing)
+  # ============================================================
+  wafw00f:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir wafw00f
+        WORKDIR /app
+    volumes:
+      - ./reports/wafw00f:/output
+    entrypoint: ["wafw00f"]
+    command:
+      - "${TARGET:-https://example.com}"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-f"
+      - "json"
+      - "-a"
+
+  # ============================================================
+  # 23. WAF — bypass-403 (403 Forbidden bypass techniques)
+  # Couvre: CWE-284,863 (access control bypass)
+  # ============================================================
+  bypass-403:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git curl && \
+            git clone --depth 1 https://github.com/iamj0ker/bypass-403.git /opt/bypass-403 && \
+            chmod +x /opt/bypass-403/bypass-403.sh && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/bypass-403
+    volumes:
+      - ./reports/bypass-403:/output
+    entrypoint: ["bash", "/opt/bypass-403/bypass-403.sh"]
+    command:
+      - "${TARGET:-https://example.com}"
+      - "/admin"
+    profiles: ["waf"]
+
+  # ============================================================
+  # 24. TLS — testssl.sh (SSL/TLS configuration audit)
+  # Couvre: CWE-295,319,326,327,328 (TLS misconfig, weak cipher)
+  # ============================================================
+  testssl:
+    <<: *common
+    image: drwetter/testssl.sh:latest
+    volumes:
+      - ./reports/testssl:/output
+    entrypoint: ["testssl.sh"]
+    command:
+      - "--jsonfile=/output/scan-${SCAN_DATE:-latest}.json"
+      - "--fast"
+      - "--ip=one"
+      - "--quiet"
+      - "${TARGET:-https://example.com}"
+
+  # ============================================================
+  # 25. CORS — CORScanner (CORS misconfiguration detection)
+  # Couvre: CWE-942,346 (permissive CORS, origin validation)
+  # ============================================================
+  corscanner:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/chenjj/CORScanner.git /opt/corscanner && \
+            pip install --no-cache-dir -r /opt/corscanner/requirements.txt && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/corscanner
+    volumes:
+      - ./reports/corscanner:/output
+      - ./reports/subdominator:/targets:ro
+    entrypoint: ["python", "/opt/corscanner/cors_scan.py"]
+    command:
+      - "-i"
+      - "/targets/high-value-targets.txt"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+
+  # ============================================================
+  # 26. Network — nmap (port scan + service detection + NSE)
+  # Couvre: CWE-16,200,284,319 (exposed services, misconfig)
+  # ============================================================
+  nmap:
+    <<: *common
+    image: instrumentisto/nmap:latest
+    volumes:
+      - ./reports/nmap:/output
+    entrypoint: ["nmap"]
+    command:
+      - "-sV"
+      - "-sC"
+      - "--top-ports"
+      - "1000"
+      - "-T3"
+      - "-oX"
+      - "/output/scan-${SCAN_DATE:-latest}.xml"
+      - "-oN"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+      - "--open"
+      - "${DOMAIN:-example.com}"
+    profiles: ["network"]
+
+  # ============================================================
+  # 27. Tech — WhatWeb (technology fingerprinting)
+  # Couvre: Reconnaissance (framework, CMS, server detection)
+  # ============================================================
+  whatweb:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ruby:3.2-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git make && \
+            git clone --depth 1 https://github.com/urbanadventurer/WhatWeb.git /opt/whatweb && \
+            cd /opt/whatweb && bundle install --without development test 2>/dev/null || true && \
+            apt-get purge -y git make && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/whatweb
+    volumes:
+      - ./reports/whatweb:/output
+    entrypoint: ["ruby", "/opt/whatweb/whatweb"]
+    command:
+      - "${TARGET:-https://example.com}"
+      - "--log-json=/output/scan-${SCAN_DATE:-latest}.json"
+      - "--aggression=3"
+      - "--color=never"
+      - "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+  # ============================================================
+  # 28. API — graphw00f (GraphQL fingerprinting + introspection)
+  # Couvre: CWE-200,284 (GraphQL schema leak, access control)
+  # ============================================================
+  graphw00f:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/dolevf/graphw00f.git /opt/graphw00f && \
+            cd /opt/graphw00f && pip install --no-cache-dir . 2>/dev/null || pip install --no-cache-dir requests pyyaml 2>/dev/null && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/graphw00f
+    volumes:
+      - ./reports/graphw00f:/output
+    entrypoint: ["python", "/opt/graphw00f/main.py"]
+    command:
+      - "-f"
+      - "-t"
+      - "${TARGET:-https://example.com}/graphql"
+
+  # ============================================================
+  # 29. Cloud — cloud_enum (S3/Azure/GCP bucket enumeration)
+  # Couvre: CWE-200,284,732 (public cloud storage exposure)
+  # ============================================================
+  cloud-enum:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/initstring/cloud_enum.git /opt/cloud_enum && \
+            pip install --no-cache-dir -r /opt/cloud_enum/requirements.txt && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/cloud_enum
+    volumes:
+      - ./reports/cloud-enum:/output
+    entrypoint: ["python", "/opt/cloud_enum/cloud_enum.py"]
+    command:
+      - "-k"
+      - "${DOMAIN:-example.com}"
+      - "-l"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+
+  # ============================================================
+  # 30. XSS — Dalfox (parameter analysis + XSS scanning)
+  # Couvre: CWE-79,80,83,87 (reflected/stored/DOM XSS)
+  # ============================================================
+  dalfox:
+    <<: *common
+    image: ghcr.io/hahwul/dalfox:latest
+    volumes:
+      - ./reports/dalfox:/output
+    entrypoint: ["/app/dalfox"]
+    command:
+      - "url"
+      - "${TARGET:-https://example.com}"
+      - "--output"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "--format"
+      - "json"
+      - "--delay"
+      - "100"
+    profiles: ["xss"]
+
+  # ============================================================
+  # 31. OOB — Interactsh (out-of-band interaction server)
+  # Couvre: CWE-918,611,78 (blind SSRF, blind XXE, blind RCE)
+  # ============================================================
+  interactsh:
+    <<: *common
+    image: projectdiscovery/interactsh-client:latest
+    volumes:
+      - ./reports/interactsh:/output
+    entrypoint: ["interactsh-client"]
+    command:
+      - "-o"
+      - "/output/interactions-${SCAN_DATE:-latest}.json"
+      - "-json"
+      - "-n"
+      - "5"
+    profiles: ["oob"]
+
+  # ============================================================
+  # 32. Classic Scanner — Nikto (web server scanner)
+  # Couvre: CWE-200,16,538,693,756,933 (server misconfig, info leak)
+  # ============================================================
+  nikto:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM perl:5-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git libnet-ssleay-perl && \
+            cpanm --notest JSON XML::Writer && \
+            git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/nikto/program
+    volumes:
+      - ./reports/nikto:/output
+    entrypoint: ["perl", "/opt/nikto/program/nikto.pl"]
+    command:
+      - "-h"
+      - "${TARGET:-https://example.com}"
+      - "-output"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "-Format"
+      - "json"
+      - "-Tuning"
+      - "123456789abc"
+
+  # ============================================================
+  # 33. JWT — jwt_tool (JSON Web Token testing)
+  # Couvre: CWE-287,345,347,327,916 (auth bypass, weak JWT)
+  # ============================================================
+  jwt-tool:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install --no-cache-dir jwt-tool 2>/dev/null || \
+            (apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/ticarpi/jwt_tool.git /opt/jwt_tool && \
+            pip install --no-cache-dir -r /opt/jwt_tool/requirements.txt && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*)
+        WORKDIR /opt/jwt_tool
+    volumes:
+      - ./reports/jwt-tool:/output
+    entrypoint: ["python", "/opt/jwt_tool/jwt_tool.py"]
+    command:
+      - "${JWT_TOKEN:-eyJhbGciOiJIUzI1NiJ9.e30.ZRrHA1JJJW8opB1Qfp7QDm9tUEGjZiKDFSJO6McnIUQ}"
+      - "-M"
+      - "at"
+      - "-cv"
+      - ""
+    profiles: ["jwt"]
+
+  # ============================================================
+  # 34. Subdomain OWASP — Amass (comprehensive enumeration)
+  # Couvre: CWE-200,16 (attack surface discovery)
+  # ============================================================
+  amass:
+    <<: *common
+    image: caffix/amass:latest
+    volumes:
+      - ./reports/amass:/output
+    entrypoint: ["amass"]
+    command:
+      - "enum"
+      - "-passive"
+      - "-d"
+      - "${DOMAIN:-example.com}"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+
+  # ============================================================
+  # 35. JS Analysis — JSLuice (JavaScript secret extraction)
+  # Couvre: CWE-200,312,315,359 (secrets in JS, API keys exposed)
+  # ============================================================
+  jsluice:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.22 AS build
+        RUN CGO_ENABLED=1 go install github.com/BishopFox/jsluice/cmd/jsluice@latest
+        FROM debian:bookworm-slim
+        COPY --from=build /go/bin/jsluice /usr/local/bin/
+    volumes:
+      - ./reports/jsluice:/output
+    entrypoint: ["jsluice"]
+    command: ["urls"]
+    profiles: ["js"]
+
+  # ============================================================
+  # 36. DNS Toolkit — DNSx (DNS query + brute-force)
+  # Couvre: CWE-350,16 (DNS misconfig, zone issues)
+  # ============================================================
+  dnsx:
+    <<: *common
+    image: projectdiscovery/dnsx:latest
+    volumes:
+      - ./reports/dnsx:/output
+    entrypoint: ["dnsx"]
+    command:
+      - "-d"
+      - "${DOMAIN:-example.com}"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+      - "-json"
+      - "-resp"
+
+  # ============================================================
+  # 37. Screenshot — Gowitness (web screenshot)
+  # Couvre: CWE-200 (visual recon, exposed panels)
+  # ============================================================
+  gowitness:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.24-bookworm AS build
+        ENV GOTOOLCHAIN=auto
+        RUN git clone --depth 1 https://github.com/sensepost/gowitness.git /src
+        WORKDIR /src
+        RUN go build -o /gowitness .
+        FROM debian:trixie-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates && \
+            rm -rf /var/lib/apt/lists/*
+        COPY --from=build /gowitness /usr/local/bin/gowitness
+        ENV CHROME_PATH=/usr/bin/chromium
+    volumes:
+      - ./reports/gowitness:/output
+    entrypoint: ["gowitness"]
+    command:
+      - "single"
+      - "${TARGET:-https://example.com}"
+      - "--screenshot-path"
+      - "/output"
+    profiles: ["screenshot"]
+
+  # ============================================================
+  # 38. CRLF Injection — CRLFuzz
+  # Couvre: CWE-93,113 (HTTP response splitting)
+  # ============================================================
+  crlfuzz:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.22-alpine AS build
+        RUN go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest
+        FROM alpine:3.19
+        COPY --from=build /go/bin/crlfuzz /usr/local/bin/
+    volumes:
+      - ./reports/crlfuzz:/output
+    entrypoint: ["crlfuzz"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+
+  # ============================================================
+  # 39. SSRF — SSRFmap (SSRF exploitation framework)
+  # Couvre: CWE-918 (server-side request forgery)
+  # ============================================================
+  ssrfmap:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/swisskyrepo/SSRFmap.git /opt/ssrfmap && \
+            pip install --no-cache-dir -r /opt/ssrfmap/requirements.txt && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/ssrfmap
+    volumes:
+      - ./reports/ssrfmap:/output
+    entrypoint: ["python", "/opt/ssrfmap/ssrfmap.py"]
+    command: ["--help"]
+    profiles: ["ssrf"]
+
+  # ============================================================
+  # 40. Container Lint — Dockle (Dockerfile best practices)
+  # Couvre: CWE-250,269,732 (excessive privileges in containers)
+  # ============================================================
+  dockle:
+    <<: *common
+    image: goodwithtech/dockle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./reports/dockle:/output
+    entrypoint: ["dockle"]
+    command:
+      - "--format"
+      - "json"
+      - "--output"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "${IMAGE:-alpine:latest}"
+    profiles: ["container"]
+
+  # ============================================================
+  # 41. Frontend SCA — RetireJS (known vulnerable JS libraries)
+  # Couvre: CWE-1104,829 (vulnerable components, third-party JS)
+  # ============================================================
+  retirejs:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:20-slim
+        RUN npm install -g retire
+    volumes:
+      - ./reports/retirejs:/output
+    entrypoint: ["retire"]
+    command:
+      - "--outputformat"
+      - "json"
+      - "--outputpath"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+    profiles: ["frontend-sca"]
+
+  # ============================================================
+  # 42. Log4Shell — log4j-scan (CVE-2021-44228 detection)
+  # Couvre: CWE-94,917,502 (JNDI injection, deserialization)
+  # ============================================================
+  log4j-scan:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/fullhunt/log4j-scan.git /opt/log4j-scan && \
+            pip install --no-cache-dir -r /opt/log4j-scan/requirements.txt && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/log4j-scan
+    volumes:
+      - ./reports/log4j-scan:/output
+    entrypoint: ["python", "/opt/log4j-scan/log4j-scan.py"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+
+  # ============================================================
+  # 43. OSINT — theHarvester (email/subdomain/IP harvesting)
+  # Couvre: CWE-200,359 (information exposure, privacy)
+  # ============================================================
+  theharvester:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/laramies/theHarvester.git /opt/theharvester && \
+            pip install --no-cache-dir /opt/theharvester && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/theharvester
+    volumes:
+      - ./reports/theharvester:/output
+    entrypoint: ["theHarvester"]
+    command:
+      - "-d"
+      - "${DOMAIN:-example.com}"
+      - "-b"
+      - "all"
+      - "-f"
+      - "/output/scan-${SCAN_DATE:-latest}"
+    profiles: ["osint"]
+
+  # ============================================================
+  # 44. OpenAPI — Cherrybomb (API spec audit)
+  # Couvre: CWE-20,285,862,863 (improper input validation, authz)
+  # ============================================================
+  cherrybomb:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM rust:latest AS build
+        RUN cargo install cherrybomb
+        FROM debian:trixie-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+            rm -rf /var/lib/apt/lists/*
+        COPY --from=build /usr/local/cargo/bin/cherrybomb /usr/local/bin/
+    volumes:
+      - ./reports/cherrybomb:/output
+    entrypoint: ["cherrybomb"]
+    command:
+      - "--file"
+      - "/output/openapi.json"
+      - "--output"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+    profiles: ["openapi"]
+
+  # ============================================================
+  # 45. Prototype Pollution — ppmap
+  # Couvre: CWE-1321 (prototype pollution)
+  # ============================================================
+  ppmap:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.24-bookworm AS build
+        ENV GOTOOLCHAIN=auto
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/kleiton0x00/ppmap.git /tmp/ppmap && \
+            cd /tmp/ppmap && go mod init ppmap && go mod tidy && \
+            CGO_ENABLED=0 go build -o /go/bin/ppmap . && \
+            rm -rf /var/lib/apt/lists/*
+        FROM debian:trixie-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends chromium && \
+            rm -rf /var/lib/apt/lists/*
+        COPY --from=build /go/bin/ppmap /usr/local/bin/
+    volumes:
+      - ./reports/ppmap:/output
+    entrypoint: ["ppmap"]
+    profiles: ["prototype"]
+
+  # ============================================================
+  # 46. GraphQL Deep — Clairvoyance (schema introspection bypass)
+  # Couvre: CWE-200,284,639 (GraphQL info leak, broken authz)
+  # ============================================================
+  clairvoyance:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/nikitastupin/clairvoyance.git /opt/clairvoyance && \
+            pip install --no-cache-dir /opt/clairvoyance && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/clairvoyance
+    volumes:
+      - ./reports/clairvoyance:/output
+    entrypoint: ["python", "/opt/clairvoyance/clairvoyance.py"]
+    command:
+      - "-o"
+      - "/output/schema-${SCAN_DATE:-latest}.json"
+      - "${TARGET:-https://example.com}/graphql"
+    profiles: ["graphql"]
+
+  # ============================================================
+  # 47. CMS — CMSeeK (CMS detection + vulnerability scan)
+  # Couvre: CWE-200,16,1104 (CMS misconfig, outdated CMS)
+  # ============================================================
+  cmseek:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/Tuhinshubhra/CMSeeK.git /opt/cmseek && \
+            pip install --no-cache-dir requests beautifulsoup4 && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/cmseek
+    volumes:
+      - ./reports/cmseek:/output
+    entrypoint: ["python", "/opt/cmseek/cmseek.py"]
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "--batch"
+    profiles: ["cms"]
+
+  # ============================================================
+  # 48. Reporting — DefectDojo (dashboard unifié)
   # ============================================================
   defectdojo-db:
     image: postgres:16-alpine
@@ -413,6 +1254,339 @@ services:
       - defectdojo-db
       - defectdojo-rabbitmq
     profiles: ["defectdojo"]
+
+  # ============================================================
+  # PYTHON SCANNERS — Custom IDOR / Auth / Enum / Inject / CORS / OIDC
+  # Shared build context: tools/python-scanners/
+  # ============================================================
+  idor-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/idor-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/idor_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/idor-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  auth-bypass:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/auth-bypass:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/auth_bypass.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/auth-bypass-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  user-enum:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/user-enum:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/user_enum.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/user-enum-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+      - TEST_EMAIL=${TEST_EMAIL:-}
+    profiles: ["python-scanners"]
+
+  notif-inject:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/notif-inject:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/notif_inject.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/notif-inject-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  redirect-cors:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/redirect-cors:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/redirect_cors.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/redirect-cors-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  oidc-audit:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/oidc-audit:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/oidc_audit.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/oidc-audit-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 36. Python — bypass-403-advanced (403 bypass + RPC discovery)
+  # Couvre: CWE-284 (access control bypass, path normalization, headers)
+  # ============================================================
+  bypass-403-advanced:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/bypass-403-advanced:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/bypass_403.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/bypass-403-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 37. Python — ssrf-scanner (SSRF: metadata, smuggling, OOB)
+  # Couvre: CWE-918 (server-side request forgery)
+  # ============================================================
+  ssrf-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/ssrf-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/ssrf_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/ssrf-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 38. Python — xss-scanner (Reflected + Stored + SSTI + CSP)
+  # Couvre: CWE-79 (XSS), CWE-693 (CSP bypass), CWE-1336 (SSTI)
+  # ============================================================
+  xss-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/xss-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/xss_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/xss-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 39. Python — api-discovery (JS Bundle + Endpoint Discovery)
+  # Couvre: CWE-200 (Info Exposure), CWE-540 (Sensitive Info in Source)
+  # ============================================================
+  api-discovery:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/api-discovery:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/api_discovery.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/api-discovery-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 40. Python — secret-leak (Secret/Token Leakage Detection)
+  # Couvre: CWE-312 (Cleartext Storage), CWE-540 (Source Secrets), CWE-615 (Comments)
+  # ============================================================
+  secret-leak:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/secret-leak:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/secret_leak.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/secret-leak-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+      - CSRF_TOKEN=${CSRF_TOKEN:-}
+    profiles: ["python-scanners"]
 
 volumes:
   trivy-cache:

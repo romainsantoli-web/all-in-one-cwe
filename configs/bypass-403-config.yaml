@@ -1,0 +1,21 @@
+# 403 Bypass + RPC Scanner Configuration
+# ========================================
+# Uncomment and customize sections as needed.
+
+# Restricted paths to test (override defaults):
+# restricted_paths:
+#   - /admin
+#   - /api/admin
+#   - /internal
+#   - /dashboard
+#   - /console
+#   - /rpc
+#   - /sigma/request
+
+# JSON-RPC methods to enumerate:
+# rpc_methods:
+#   - ping
+#   - session.getInfo
+#   - account.getSettings
+#   - user.list
+#   - system.listMethods

@@ -1,0 +1,65 @@
+# Auth Extractor Configuration
+# Used by: auth_extractor.py
+#
+# Override defaults for CDP connection and token extraction.
+
+# Chrome DevTools Protocol connection
+cdp:
+  host: "127.0.0.1"
+  port: 9222
+
+# Output configuration
+output:
+  env_file: "auth.env"       # .env file for shell sourcing
+  json_dump: true             # Also dump raw JSON for debugging
+
+# Token extraction strategies (all enabled by default)
+extraction:
+  cookies: true
+  csrf_token: true
+  local_storage: true
+  session_storage: true
+  auth_headers: true
+
+# Cookie name patterns to always include (even if not matching domain exactly)
+# Useful for SSO cookies on different subdomains
+cookie_patterns:
+  - "*session*"
+  - "*token*"
+  - "*csrf*"
+  - "*auth*"
+  - "*sid*"
+  - "*jwt*"
+
+# Known token key names in localStorage/sessionStorage
+# The extractor also auto-detects JWT-shaped values
+storage_token_keys:
+  - "access_token"
+  - "id_token"
+  - "refresh_token"
+  - "auth_token"
+  - "jwt"
+  - "bearer"
+  - "session_token"
+  - "api_key"
+
+# Headers to look for in intercepted requests
+auth_header_names:
+  - "Authorization"
+  - "X-CSRF-Token"
+  - "X-Auth-Token"
+  - "X-API-Key"
+  - "X-Session-Token"
+
+# Target-specific overrides (uncomment and edit)
+# target_overrides:
+#   doctolib.fr:
+#     extra_cookie_names:
+#       - "_doctolib_session"
+#       - "ssid"
+#       - "esid"
+#     csrf_meta_name: "csrf-token"
+#   cryptobox.com:
+#     extra_cookie_names:
+#       - "JSESSIONID"
+#     auth_header: "X-Auth-Token"

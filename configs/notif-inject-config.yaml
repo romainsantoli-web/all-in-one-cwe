@@ -1,0 +1,10 @@
+# Notification Injection Scanner Configuration
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+
+# Custom email-triggering endpoints
+# email_endpoints:
+#   - name: "Custom Notification"
+#     path: "/api/notify"
+#     method: "POST"
+#     email_fields: ["email"]
+#     text_fields: ["message", "subject"]

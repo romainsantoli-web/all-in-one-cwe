@@ -1,10 +1,18 @@
-# Semgrep configuration
-# Rulesets covering CWE from the bug bounty list
+# Semgrep configuration — Security All-in-One CWE
+# Covers: CWE-22,78,79,89,94,134,256,259,260,295,311,312,319,
+#         321,326,327,328,330,338,352,400,502,522,611,613,640,
+#         798,918,1336,1427
+#
+# Usage: semgrep scan --config=auto --config=/rules/ --config=this-file
+# The --config=auto flag pulls OWASP Top 10 + language-specific rules.
+# Custom rules in custom-rules/semgrep/ add CWE-specific detections.
+#
+# This file adds targeted rulesets from the Semgrep registry:
 rules:
-  # Use auto config to pull OWASP Top 10 + language-specific rules
-  # Additional custom rules are in custom-rules/semgrep/
-  - id: placeholder
-    message: "This is a placeholder — real rules are auto-loaded and in custom-rules/"
-    severity: INFO
+  - id: security-semgrep-owasp-top10
+    message: "OWASP Top 10 matched — see semgrep registry p/owasp-top-ten"
+    severity: WARNING
     languages: [generic]
-    pattern: "PLACEHOLDER_WILL_NEVER_MATCH_12345"
+    pattern: "THIS_IS_A_META_RULE_USE_CONFIG_AUTO"
+# NOTE: Actual scanning uses --config=auto + --config=/rules/ (see docker-compose.yml).
+# This file exists for documentation and can be extended with inline rules.

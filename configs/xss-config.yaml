@@ -1,0 +1,21 @@
+# XSS Scanner Configuration
+# ==========================
+# Uncomment and customize sections as needed.
+
+# Reflected XSS targets (override defaults):
+# reflected_targets:
+#   - path: /search
+#     params: [q, query, search, term]
+#   - path: /api/search
+#     params: [q, query]
+#   - path: /error
+#     params: [message, error]
+
+# Stored XSS targets (override defaults):
+# stored_targets:
+#   - path: /api/users/me
+#     method: PUT
+#     fields: [first_name, last_name, bio]
+#   - path: /api/messages
+#     method: POST
+#     fields: [content, subject]

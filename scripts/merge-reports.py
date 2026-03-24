@@ -22,6 +22,17 @@ TOOL_PARSERS = {
     "trivy": "parse_trivy",
     "cwe-checker": "parse_cwe_checker",
     "garak": "parse_garak",
+    "idor-scanner": "parse_python_scanner",
+    "auth-bypass": "parse_python_scanner",
+    "user-enum": "parse_python_scanner",
+    "notif-inject": "parse_python_scanner",
+    "redirect-cors": "parse_python_scanner",
+    "oidc-audit": "parse_python_scanner",
+    "bypass-403-advanced": "parse_python_scanner",
+    "ssrf-scanner": "parse_python_scanner",
+    "xss-scanner": "parse_python_scanner",
+    "api-discovery": "parse_python_scanner",
+    "secret-leak": "parse_python_scanner",
 }
 
 
@@ -224,7 +235,10 @@ def load_report(tool_dir):
     if not tool_path.exists():
         return None
 
-    json_files = sorted(tool_path.glob("*.json"), key=os.path.getmtime, reverse=True)
+    json_files = sorted(
+        list(tool_path.glob("*.json")) + list(tool_path.glob("*.jsonl")),
+        key=os.path.getmtime, reverse=True,
+    )
     if not json_files:
         return None
 
@@ -249,6 +263,36 @@ def load_report(tool_dir):
             except json.JSONDecodeError:
                 continue
     return items if items else None
+
+
+def parse_python_scanner(data):
+    """Parse output from custom Python scanners (lib.py save_findings format).
+
+    Format: {"tool": "...", "findings": [{"id": ..., "name": ..., "severity": ..., ...}]}
+    """
+    findings = []
+    if isinstance(data, dict):
+        raw = data.get("findings", [])
+        tool = data.get("tool", "python-scanner")
+    elif isinstance(data, list):
+        raw = data
+        tool = "python-scanner"
+    else:
+        return findings
+
+    for item in raw:
+        findings.append({
+            "tool": tool,
+            "id": item.get("id", ""),
+            "name": item.get("name", item.get("title", "")),
+            "severity": item.get("severity", "info"),
+            "cwe": item.get("cwe", ""),
+            "url": item.get("url", item.get("endpoint", "")),
+            "description": item.get("description", ""),
+            "evidence": item.get("evidence", {}),
+            "remediation": item.get("remediation", ""),
+        })
+    return findings
 
 
 def main():

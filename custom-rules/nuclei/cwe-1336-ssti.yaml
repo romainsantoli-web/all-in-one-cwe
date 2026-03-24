@@ -12,20 +12,26 @@ info:
 http:
   - method: GET
     path:
-      - "{{BaseURL}}/?name={{url_encode('{{7*7}}')}}"
-      - "{{BaseURL}}/?template={{url_encode('${7*7}')}}"
-      - "{{BaseURL}}/?page={{url_encode('<%= 7*7 %>')}}"
-      - "{{BaseURL}}/?q={{url_encode('#{7*7}')}}"
-      - "{{BaseURL}}/?search={{url_encode('{7*7}')}}"
-      - "{{BaseURL}}/?input={{url_encode('{{config}}')}}"
+      - "{{BaseURL}}/?name={{url_encode('{{7*191}}')}}"
+      - "{{BaseURL}}/?template={{url_encode('${7*191}')}}"
+      - "{{BaseURL}}/?page={{url_encode('<%= 7*191 %>')}}"
+      - "{{BaseURL}}/?q={{url_encode('#{7*191}')}}"
+      - "{{BaseURL}}/?search={{url_encode('{7*191}')}}"
 
     matchers-condition: and
     matchers:
       - type: word
         part: body
         words:
-          - "49"
+          - "1337"
 
       - type: status
         status:
           - 200
+
+      - type: word
+        part: body
+        negative: true
+        words:
+          - "cf_chl"
+          - "challenge-platform"
