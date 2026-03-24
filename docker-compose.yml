@@ -1588,6 +1588,197 @@ services:
       - CSRF_TOKEN=${CSRF_TOKEN:-}
     profiles: ["python-scanners"]
 
+  # ============================================================
+  # 41. Prefect Server — Orchestration UI + API (port 4200)
+  # ============================================================
+  prefect-server:
+    <<: *common
+    image: prefecthq/prefect:3-latest
+    command: ["prefect", "server", "start", "--host", "0.0.0.0"]
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+    profiles: ["orchestrator"]
+
+  # ============================================================
+  # 42. Prefect Worker — Executes flow runs
+  # ============================================================
+  prefect-worker:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN pip install --no-cache-dir prefect>=3.0 pyyaml>=6.0
+        COPY orchestrator/ /app/orchestrator/
+        COPY scripts/ /app/scripts/
+        WORKDIR /app
+    command: ["prefect", "worker", "start", "--pool", "default"]
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    depends_on:
+      - prefect-server
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    profiles: ["orchestrator"]
+
+  # ============================================================
+  # 43. HTTP Request Smuggler — CWE-444 (HTTP Smuggling)
+  # ============================================================
+  smuggler:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN pip install --no-cache-dir h2 requests urllib3 && \
+            git clone --depth 1 https://github.com/defparam/smuggler.git /opt/smuggler
+        WORKDIR /opt/smuggler
+        ENTRYPOINT ["python", "smuggler.py"]
+    volumes:
+      - ./reports/smuggler:/output
+    command:
+      - "-u"
+      - "${TARGET:-https://example.com}"
+      - "-q"
+    profiles: ["web-advanced"]
+
+  # ============================================================
+  # 44. Checkov — IaC Security Scanner (Terraform, K8s, Docker)
+  # CWE-284, CWE-922, CWE-16
+  # ============================================================
+  checkov:
+    <<: *common
+    image: bridgecrew/checkov:latest
+    volumes:
+      - ${CODE:-.}:/code:ro
+      - ./reports/checkov:/output
+    command:
+      - "-d"
+      - "/code"
+      - "-o"
+      - "json"
+      - "--output-file-path"
+      - "/output"
+      - "--quiet"
+      - "--compact"
+    profiles: ["iac"]
+
+  # ============================================================
+  # 45. WebSocket Scanner — CWE-284, CWE-345, CWE-346
+  # ============================================================
+  websocket-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/websocket-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/websocket_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 46. Web Cache Deception Scanner — CWE-346, CWE-524
+  # ============================================================
+  cache-deception:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/cache-deception:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/cache_deception.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-10}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 47. Slowloris Detector — CWE-400, CWE-770 (non-destructive)
+  # ============================================================
+  slowloris-check:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/slowloris-check:/output
+    entrypoint: ["python", "/app/slowloris_check.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--max-conns"
+      - "20"
+      - "--hold-time"
+      - "15"
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 48. RESTler — Stateful REST API Fuzzer (Microsoft)
+  # CWE-20, CWE-89, CWE-200
+  # ============================================================
+  restler:
+    <<: *common
+    image: mcr.microsoft.com/restlerfuzzer/restler:latest
+    volumes:
+      - ./reports/restler:/output
+      - ./configs:/configs:ro
+      - ${OPENAPI_SPEC:-./configs/openapi.yaml}:/spec/openapi.yaml:ro
+    command:
+      - "compile"
+      - "--api_spec"
+      - "/spec/openapi.yaml"
+    profiles: ["api-fuzzing"]
+
+  # ============================================================
+  # Dashboard — Next.js results viewer (port 3000)
+  # ============================================================
+  dashboard:
+    <<: *common
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./reports/unified:/data/reports/unified:ro
+    environment:
+      - REPORTS_DIR=/data/reports/unified
+      - NODE_ENV=production
+    profiles: ["dashboard"]
+
 volumes:
   trivy-cache:
   dependency-check-data:

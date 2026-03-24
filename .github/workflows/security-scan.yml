@@ -1,0 +1,179 @@
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+# Security All-in-One CWE — CI/CD Pipeline
+# Triggers: manual dispatch + weekly schedule
+name: Security Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target URL (e.g. https://example.com)"
+        required: true
+        type: string
+      domain:
+        description: "Domain (auto-extracted from target if blank)"
+        required: false
+        type: string
+      profile:
+        description: "Scan profile"
+        required: true
+        type: choice
+        options:
+          - light
+          - medium
+          - full
+        default: light
+      code_path:
+        description: "Source code path (for SAST scans)"
+        required: false
+        type: string
+        default: "."
+      notify_slack:
+        description: "Send Slack notification on critical findings"
+        required: false
+        type: boolean
+        default: false
+
+  schedule:
+    # Weekly on Monday at 02:00 UTC
+    - cron: "0 2 * * 1"
+
+env:
+  TARGET: ${{ github.event.inputs.target || vars.DEFAULT_TARGET || 'https://httpbin.org' }}
+  DOMAIN: ${{ github.event.inputs.domain || '' }}
+  PROFILE: ${{ github.event.inputs.profile || 'light' }}
+  CODE: ${{ github.event.inputs.code_path || '.' }}
+  SCAN_DATE: ${{ github.run_id }}-${{ github.run_number }}
+
+jobs:
+  scan:
+    name: "Security Scan (${{ github.event.inputs.profile || 'light' }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements-orchestrator.txt
+          pip install -r requirements-reporting.txt
+
+      - name: Auto-detect domain from target
+        run: |
+          if [ -z "$DOMAIN" ]; then
+            DOMAIN=$(echo "$TARGET" | sed -E 's|https?://||;s|/.*||;s|:.*||')
+            echo "DOMAIN=$DOMAIN" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up Docker Compose
+        run: |
+          docker compose version
+          echo "Building scanner images..."
+          docker compose build --parallel 2>/dev/null || true
+
+      - name: Pull third-party images
+        run: docker compose pull --ignore-buildable 2>/dev/null || true
+
+      - name: Create report directories
+        run: |
+          mkdir -p reports/{unified,dashboard}
+          find reports -name '.gitkeep' -delete 2>/dev/null || true
+
+      - name: Run scan (${{ env.PROFILE }} profile)
+        run: |
+          make scan-${{ env.PROFILE }} TARGET="${TARGET}" DOMAIN="${DOMAIN}" CODE="${CODE}"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Merge reports
+        if: always()
+        run: python scripts/merge-reports.py
+
+      - name: Deduplicate findings
+        if: always()
+        run: python scripts/dedup_engine.py
+
+      - name: Score findings (CVSS + EPSS)
+        if: always()
+        run: python scripts/scoring_engine.py
+
+      - name: AI analysis (optional)
+        if: always()
+        continue-on-error: true
+        run: python scripts/ai_analyzer.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'gpt-3.5-turbo' }}
+
+      - name: Generate HTML dashboard
+        if: always()
+        run: python scripts/generate_dashboard.py
+
+      - name: Upload scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results-${{ env.SCAN_DATE }}
+          path: |
+            reports/unified/unified-report.json
+            reports/unified/deduped-report.json
+            reports/unified/scored-report.json
+            reports/unified/analyzed-report.json
+            reports/unified/dashboard.html
+          retention-days: 90
+
+      - name: Check for critical findings
+        id: check_critical
+        if: always()
+        run: |
+          CRITICAL_COUNT=$(python3 -c "
+          import json, sys
+          try:
+              with open('reports/unified/scored-report.json') as f:
+                  data = json.load(f)
+              findings = data if isinstance(data, list) else data.get('findings', [])
+              count = sum(1 for f in findings if f.get('severity','').lower() == 'critical')
+              print(count)
+          except Exception:
+              print(0)
+          ")
+          echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "::warning::Found $CRITICAL_COUNT CRITICAL findings!"
+          fi
+
+      - name: Slack notification (critical findings)
+        if: >
+          always() &&
+          github.event.inputs.notify_slack == 'true' &&
+          steps.check_critical.outputs.critical_count > 0
+        continue-on-error: true
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"🚨 Security scan found ${{ steps.check_critical.outputs.critical_count }} CRITICAL findings on \`${TARGET}\` (profile: ${PROFILE}). <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View results>\"
+            }"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🔒 Scan Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Target**: \`${TARGET}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Profile**: ${PROFILE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Critical findings**: ${{ steps.check_critical.outputs.critical_count || '0' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the full report from the Artifacts section." >> "$GITHUB_STEP_SUMMARY"

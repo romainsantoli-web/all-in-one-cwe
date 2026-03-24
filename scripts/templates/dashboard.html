@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --fg: #c9d1d9; --fg-muted: #8b949e; --accent: #58a6ff;
+  --critical: #f85149; --high: #f0883e; --medium: #d29922; --low: #3fb950; --info: #58a6ff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; background: var(--bg); color: var(--fg); }
+
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 1.4rem; }
+header .meta { color: var(--fg-muted); font-size: 0.85rem; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; padding: 1.5rem 2rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; text-align: center; }
+.stat-card .value { font-size: 2rem; font-weight: 700; }
+.stat-card .label { color: var(--fg-muted); font-size: 0.85rem; margin-top: 0.3rem; }
+.stat-card.critical .value { color: var(--critical); }
+.stat-card.high .value { color: var(--high); }
+.stat-card.medium .value { color: var(--medium); }
+.stat-card.low .value { color: var(--low); }
+
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 0 2rem 1.5rem; }
+.chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+.chart-box h3 { font-size: 0.95rem; margin-bottom: 0.8rem; color: var(--accent); }
+canvas { max-height: 300px; }
+
+.controls { padding: 0 2rem 1rem; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.controls select, .controls input { background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.8rem; font-size: 0.85rem; }
+.controls input { min-width: 250px; }
+
+table { width: 100%; border-collapse: collapse; }
+.table-wrap { padding: 0 2rem 2rem; overflow-x: auto; }
+th { background: var(--surface); position: sticky; top: 0; text-align: left; padding: 0.7rem 0.8rem; font-size: 0.8rem; color: var(--fg-muted); border-bottom: 2px solid var(--border); cursor: pointer; user-select: none; }
+th:hover { color: var(--accent); }
+td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: top; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr:hover td { background: rgba(88,166,255,0.05); }
+
+.badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.badge.critical { background: rgba(248,81,73,0.15); color: var(--critical); }
+.badge.high { background: rgba(240,136,62,0.15); color: var(--high); }
+.badge.medium { background: rgba(210,153,34,0.15); color: var(--medium); }
+.badge.low { background: rgba(63,185,80,0.15); color: var(--low); }
+.badge.info { background: rgba(88,166,255,0.15); color: var(--info); }
+
+.expandable { cursor: pointer; }
+.expandable:hover { color: var(--accent); }
+.detail-row { display: none; }
+.detail-row.active { display: table-row; }
+.detail-row td { white-space: pre-wrap; word-break: break-all; background: var(--surface); padding: 1rem; font-family: monospace; font-size: 0.8rem; color: var(--fg-muted); }
+
+footer { text-align: center; padding: 1.5rem; color: var(--fg-muted); font-size: 0.75rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ {{ title }}</h1>
+  <div class="meta">
+    <div>Target: <strong>{{ target }}</strong></div>
+    <div>Generated: {{ generated_at }} | Tools: {{ tools_count }} | Findings: {{ total_findings }}</div>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="stat-card critical">
+    <div class="value">{{ severity_counts.critical }}</div>
+    <div class="label">Critical</div>
+  </div>
+  <div class="stat-card high">
+    <div class="value">{{ severity_counts.high }}</div>
+    <div class="label">High</div>
+  </div>
+  <div class="stat-card medium">
+    <div class="value">{{ severity_counts.medium }}</div>
+    <div class="label">Medium</div>
+  </div>
+  <div class="stat-card low">
+    <div class="value">{{ severity_counts.low }}</div>
+    <div class="label">Low</div>
+  </div>
+  <div class="stat-card">
+    <div class="value" style="color: var(--accent);">{{ cvss_avg }}</div>
+    <div class="label">Avg CVSS</div>
+  </div>
+</div>
+
+<div class="charts">
+  <div class="chart-box">
+    <h3>Severity Distribution</h3>
+    <canvas id="severityChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>Top CWEs</h3>
+    <canvas id="cweChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>Tool Coverage</h3>
+    <canvas id="toolChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>CVSS Score Distribution</h3>
+    <canvas id="cvssChart"></canvas>
+  </div>
+</div>
+
+<div class="controls">
+  <select id="filterSeverity">
+    <option value="">All Severities</option>
+    <option value="critical">Critical</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+    <option value="info">Info</option>
+  </select>
+  <select id="filterCwe">
+    <option value="">All CWEs</option>
+    {% for cwe in cwe_list %}
+    <option value="{{ cwe }}">{{ cwe }}</option>
+    {% endfor %}
+  </select>
+  <select id="filterTool">
+    <option value="">All Tools</option>
+    {% for tool in tool_list %}
+    <option value="{{ tool }}">{{ tool }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" id="searchBox" placeholder="Search findings...">
+</div>
+
+<div class="table-wrap">
+<table id="findingsTable">
+  <thead>
+    <tr>
+      <th data-col="severity">Severity ↕</th>
+      <th data-col="cvss">CVSS ↕</th>
+      <th data-col="cwe">CWE ↕</th>
+      <th data-col="name">Finding ↕</th>
+      <th data-col="url">URL ↕</th>
+      <th data-col="tool">Tool(s) ↕</th>
+      <th data-col="epss">EPSS ↕</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in findings %}
+    <tr class="finding-row expandable" data-severity="{{ f.severity }}" data-cwe="{{ f.cwe }}" data-tool="{{ f.tools }}" data-idx="{{ loop.index0 }}">
+      <td><span class="badge {{ f.severity }}">{{ f.severity }}</span></td>
+      <td>{{ f.cvss_score }}</td>
+      <td>{{ f.cwe }}</td>
+      <td title="{{ f.name }}">{{ f.name_short }}</td>
+      <td title="{{ f.url }}">{{ f.url_short }}</td>
+      <td>{{ f.tools }}</td>
+      <td>{{ f.epss }}</td>
+    </tr>
+    <tr class="detail-row" data-idx="{{ loop.index0 }}">
+      <td colspan="7">
+<strong>Explanation:</strong> {{ f.explanation }}
+
+<strong>Impact:</strong> {{ f.impact }}
+
+<strong>Remediation:</strong> {{ f.remediation }}
+
+<strong>PoC:</strong> {{ f.poc }}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<footer>
+  ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.<br>
+  Generated by security-all-in-one-cwe reporting pipeline
+</footer>
+
+<script>
+// --- Chart Data (injected by Jinja2) ---
+const severityData = {{ severity_json }};
+const cweData = {{ cwe_json }};
+const toolData = {{ tool_json }};
+const cvssData = {{ cvss_json }};
+
+const COLORS = { critical: '#f85149', high: '#f0883e', medium: '#d29922', low: '#3fb950', info: '#58a6ff' };
+const chartDefaults = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#c9d1d9', font: { size: 11 } } } } };
+Chart.defaults.color = '#8b949e';
+
+// Severity pie
+new Chart(document.getElementById('severityChart'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(severityData),
+    datasets: [{ data: Object.values(severityData), backgroundColor: Object.keys(severityData).map(s => COLORS[s] || '#8b949e') }]
+  },
+  options: chartDefaults
+});
+
+// CWE bar
+new Chart(document.getElementById('cweChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(cweData),
+    datasets: [{ label: 'Findings', data: Object.values(cweData), backgroundColor: '#58a6ff' }]
+  },
+  options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+
+// Tool bar
+new Chart(document.getElementById('toolChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(toolData),
+    datasets: [{ label: 'Findings', data: Object.values(toolData), backgroundColor: '#3fb950' }]
+  },
+  options: { ...chartDefaults, plugins: { legend: { display: false } } }
+});
+
+// CVSS histogram
+new Chart(document.getElementById('cvssChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(cvssData),
+    datasets: [{ label: 'Count', data: Object.values(cvssData), backgroundColor: '#f0883e' }]
+  },
+  options: { ...chartDefaults, plugins: { legend: { display: false } } }
+});
+
+// --- Filtering ---
+function applyFilters() {
+  const sev = document.getElementById('filterSeverity').value;
+  const cwe = document.getElementById('filterCwe').value;
+  const tool = document.getElementById('filterTool').value;
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  document.querySelectorAll('.finding-row').forEach(row => {
+    const matchSev = !sev || row.dataset.severity === sev;
+    const matchCwe = !cwe || row.dataset.cwe === cwe;
+    const matchTool = !tool || row.dataset.tool.includes(tool);
+    const matchQ = !q || row.textContent.toLowerCase().includes(q);
+    row.style.display = (matchSev && matchCwe && matchTool && matchQ) ? '' : 'none';
+    // hide detail row too
+    const detail = document.querySelector(`.detail-row[data-idx="${row.dataset.idx}"]`);
+    if (detail) detail.classList.remove('active');
+  });
+}
+document.querySelectorAll('.controls select, .controls input').forEach(el => el.addEventListener('input', applyFilters));
+
+// --- Expand/collapse ---
+document.querySelectorAll('.finding-row').forEach(row => {
+  row.addEventListener('click', () => {
+    const detail = document.querySelector(`.detail-row[data-idx="${row.dataset.idx}"]`);
+    if (detail) detail.classList.toggle('active');
+  });
+});
+
+// --- Column sorting ---
+let sortCol = null, sortAsc = true;
+document.querySelectorAll('th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+    const tbody = document.querySelector('#findingsTable tbody');
+    const rows = Array.from(tbody.querySelectorAll('.finding-row'));
+    rows.sort((a, b) => {
+      const aVal = a.children[['severity','cvss','cwe','name','url','tool','epss'].indexOf(col)]?.textContent || '';
+      const bVal = b.children[['severity','cvss','cwe','name','url','tool','epss'].indexOf(col)]?.textContent || '';
+      const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+      const cmp = (!isNaN(aNum) && !isNaN(bNum)) ? aNum - bNum : aVal.localeCompare(bVal);
+      return sortAsc ? cmp : -cmp;
+    });
+    rows.forEach(r => {
+      const detail = document.querySelector(`.detail-row[data-idx="${r.dataset.idx}"]`);
+      tbody.appendChild(r);
+      if (detail) tbody.appendChild(detail);
+    });
+  });
+});
+</script>
+</body>
+</html>

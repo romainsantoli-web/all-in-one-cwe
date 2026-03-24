@@ -1,0 +1,3 @@
+# Prefect 3.x orchestration engine
+prefect>=3.0,<4.0
+pyyaml>=6.0

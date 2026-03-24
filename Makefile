@@ -24,7 +24,11 @@ export LLM_TYPE ?= openai
        crlf ssrf container-lint frontend-sca log4shell osint openapi proto-pollution graphql-deep cms \
        idor auth-bypass user-enum notif-inject redirect-cors oidc-audit bypass-403-adv ssrf-scan xss-scan api-discovery secret-leak python-scanners \
        auth-extract auth-scan \
-       zap-gui report summary defectdojo-import clean nuke
+       scan-smart prefect-ui prefect-status report-smart \
+       scan-light scan-medium scan-full \
+       websocket-scan cache-deception slowloris smuggler checkov restler \
+       wizard dashboard \
+       zap-gui report summary defectdojo-import clean nuke dashboard
 
 help: ## Show this help
 	@echo "Security All-in-One CWE — Bug Bounty Testing Suite"
@@ -46,6 +50,74 @@ run: ## Run ALL scans (DAST+DNS+SAST+Secrets+SCA) on TARGET
 full: ## Run ALL scans in thorough mode (slower)
 	./runner.sh $(TARGET) --domain $(DOMAIN) --code $(CODE) --repo $(REPO) \
 		--rate-limit $(RATE_LIMIT) --full
+
+# ── Prefect orchestrator ────────────────────────────────
+scan-smart: ## Run DAG-orchestrated scan (Prefect — parallel + retries)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
+		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT)
+
+scan-smart-dry: ## Dry-run the Prefect DAG (no actual scanning)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) --dry-run
+
+# ── Profile-based scans (light=15 tools, medium=~30, full=all) ──
+scan-light: ## Light scan — 15 essential tools, fast (~10 min)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
+		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT) \
+		--only nuclei,zap-baseline,testssl,sqlmap,semgrep,gitleaks,trivy,idor-scanner,auth-bypass,secret-leak,api-discovery,xss-scanner,httpx,whatweb,wafw00f
+
+scan-medium: ## Medium scan — ~30 tools, balanced coverage (~30 min)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
+		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT) \
+		--only nuclei,zap-baseline,testssl,sqlmap,semgrep,gitleaks,trivy,idor-scanner,auth-bypass,secret-leak,api-discovery,xss-scanner,httpx,whatweb,wafw00f,subfinder,katana,amass,dnsx,gowitness,sstimap,crlfuzz,ffuf,feroxbuster,arjun,nikto,corscanner,log4j-scan,trufflehog,user-enum,redirect-cors,oidc-audit,bypass-403-advanced,ssrf-scanner,websocket-scanner,cache-deception
+
+scan-full: ## Full scan — all tools, thorough (~60+ min)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
+		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT) --full
+
+prefect-ui: ## Start Prefect server UI (port 4200)
+	docker compose --profile orchestrator up -d prefect-server
+	@echo "Prefect UI: http://localhost:4200"
+
+prefect-status: ## Check Prefect server status
+	@curl -s http://localhost:4200/api/health 2>/dev/null && echo "Prefect server is running" || echo "Prefect server is not running"
+
+# ── Smart reporting (Phase 2) ───────────────────────────
+report-smart: ## Generate intelligent report (dedup + CVSS + AI + dashboard)
+	python3 scripts/dedup_engine.py
+	python3 scripts/scoring_engine.py
+	python3 scripts/ai_analyzer.py
+	python3 scripts/generate_dashboard.py
+	@echo "Dashboard: reports/dashboard.html"
+
+# ── Wizard & Dashboard (Phase 5) ───────────────────────
+wizard: ## Interactive scan configuration wizard
+	python -m orchestrator.wizard
+
+dashboard: ## Start Next.js results dashboard (port 3000)
+	docker compose --profile dashboard up -d dashboard
+	@echo "Dashboard: http://localhost:3000"
+
+dashboard-dev: ## Start dashboard in dev mode (requires npm install in dashboard/)
+	cd dashboard && npm run dev
+
+# ── Phase 3: New tool targets ───────────────────────────
+websocket-scan: ## WebSocket security scan — TARGET required
+	docker compose --profile python-scanners run --rm websocket-scanner
+
+cache-deception: ## Web Cache Deception scan — TARGET required
+	docker compose --profile python-scanners run --rm cache-deception
+
+slowloris: ## Slowloris detection (non-destructive) — TARGET required
+	docker compose --profile python-scanners run --rm slowloris-check
+
+smuggler: ## HTTP Request Smuggling scan — TARGET required
+	docker compose --profile web-advanced run --rm smuggler
+
+checkov: ## IaC security scan (Terraform, K8s, Docker) — CODE required
+	docker compose --profile iac run --rm checkov
+
+restler: ## REST API fuzzing (Microsoft RESTler) — needs OpenAPI spec
+	docker compose --profile api-fuzzing run --rm restler
 
 # ── Individual tool targets ─────────────────────────────
 dast: ## DAST scan only (Nuclei + ZAP) — TARGET required

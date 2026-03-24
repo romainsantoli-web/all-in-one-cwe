@@ -1,0 +1,164 @@
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+# Security hardening overlay — apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml up
+#
+# Adds: no-new-privileges, cap_drop, read-only fs, dedicated network.
+# Override nmap to add NET_RAW capability (required for raw sockets).
+
+x-sandbox: &sandbox
+  security_opt:
+    - no-new-privileges
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m
+  networks:
+    - scanner-net
+
+services:
+  # ── DAST ──────────────────────────────────────────────
+  nuclei:
+    <<: *sandbox
+  zap:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+      - /home/zap/.ZAP:size=256m
+  zap-baseline:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+      - /home/zap/.ZAP:size=256m
+  nikto:
+    <<: *sandbox
+  testssl:
+    <<: *sandbox
+
+  # ── Injection ─────────────────────────────────────────
+  sqlmap:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=256m
+      - /root/.sqlmap:size=128m
+  sstimap:
+    <<: *sandbox
+  crlfuzz:
+    <<: *sandbox
+
+  # ── Recon ─────────────────────────────────────────────
+  subfinder:
+    <<: *sandbox
+  httpx:
+    <<: *sandbox
+  katana:
+    <<: *sandbox
+  amass:
+    <<: *sandbox
+  dnsx:
+    <<: *sandbox
+  whatweb:
+    <<: *sandbox
+  wafw00f:
+    <<: *sandbox
+  gowitness:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+
+  # ── Fuzzing ───────────────────────────────────────────
+  ffuf:
+    <<: *sandbox
+  feroxbuster:
+    <<: *sandbox
+  arjun:
+    <<: *sandbox
+
+  # ── Network (nmap needs NET_RAW) ──────────────────────
+  nmap:
+    security_opt:
+      - no-new-privileges
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    networks:
+      - scanner-net
+
+  # ── SAST / Secrets ────────────────────────────────────
+  semgrep:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+  gitleaks:
+    <<: *sandbox
+  trufflehog:
+    <<: *sandbox
+  trivy:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+  dependency-check:
+    <<: *sandbox
+    tmpfs:
+      - /tmp:size=512m
+
+  # ── Specialized ──────────────────────────────────────
+  corscanner:
+    <<: *sandbox
+  log4j-scan:
+    <<: *sandbox
+  graphw00f:
+    <<: *sandbox
+  cloud-enum:
+    <<: *sandbox
+  dnsreaper:
+    <<: *sandbox
+  subdominator:
+    <<: *sandbox
+
+  # ── Phase 3 tools ─────────────────────────────────────
+  smuggler:
+    <<: *sandbox
+  checkov:
+    <<: *sandbox
+  restler:
+    <<: *sandbox
+
+  # ── Python scanners (all share same image) ────────────
+  idor-scanner:
+    <<: *sandbox
+  auth-bypass:
+    <<: *sandbox
+  user-enum:
+    <<: *sandbox
+  notif-inject:
+    <<: *sandbox
+  redirect-cors:
+    <<: *sandbox
+  oidc-audit:
+    <<: *sandbox
+  bypass-403-advanced:
+    <<: *sandbox
+  ssrf-scanner:
+    <<: *sandbox
+  xss-scanner:
+    <<: *sandbox
+  api-discovery:
+    <<: *sandbox
+  secret-leak:
+    <<: *sandbox
+  websocket-scanner:
+    <<: *sandbox
+  cache-deception:
+    <<: *sandbox
+  slowloris-check:
+    <<: *sandbox
+
+networks:
+  scanner-net:
+    driver: bridge
+    internal: false

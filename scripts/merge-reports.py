@@ -33,6 +33,12 @@ TOOL_PARSERS = {
     "xss-scanner": "parse_python_scanner",
     "api-discovery": "parse_python_scanner",
     "secret-leak": "parse_python_scanner",
+    "websocket-scanner": "parse_python_scanner",
+    "cache-deception": "parse_python_scanner",
+    "slowloris-check": "parse_python_scanner",
+    "smuggler": "parse_smuggler",
+    "checkov": "parse_checkov",
+    "restler": "parse_restler",
 }
 
 
@@ -291,6 +297,62 @@ def parse_python_scanner(data):
             "description": item.get("description", ""),
             "evidence": item.get("evidence", {}),
             "remediation": item.get("remediation", ""),
+        })
+    return findings
+
+
+def parse_smuggler(data):
+    """Parse defparam/smuggler stdout JSON."""
+    findings = []
+    items = data if isinstance(data, list) else [data]
+    for item in items:
+        findings.append({
+            "tool": "smuggler",
+            "id": item.get("id", "http-smuggling"),
+            "name": item.get("title", "HTTP Request Smuggling"),
+            "severity": item.get("severity", "high"),
+            "cwe": "CWE-444",
+            "url": item.get("url", ""),
+            "description": item.get("detail", item.get("description", "")),
+            "evidence": item.get("evidence", {}),
+        })
+    return findings
+
+
+def parse_checkov(data):
+    """Parse Checkov JSON output."""
+    findings = []
+    results = data if isinstance(data, list) else data.get("results", {}).get("failed_checks", [])
+    for item in results:
+        sev_map = {"CRITICAL": "critical", "HIGH": "high", "MEDIUM": "medium", "LOW": "low"}
+        sev = sev_map.get(str(item.get("severity", "")).upper(), "medium")
+        findings.append({
+            "tool": "checkov",
+            "id": item.get("check_id", ""),
+            "name": item.get("check_name", item.get("name", "")),
+            "severity": sev,
+            "cwe": item.get("cwe", "CWE-16"),
+            "url": item.get("file_path", item.get("resource", "")),
+            "description": item.get("guideline", ""),
+            "evidence": {"resource": item.get("resource", ""), "file": item.get("file_path", "")},
+        })
+    return findings
+
+
+def parse_restler(data):
+    """Parse RESTler fuzzing results."""
+    findings = []
+    bugs = data if isinstance(data, list) else data.get("bugs", [])
+    for item in bugs:
+        findings.append({
+            "tool": "restler",
+            "id": item.get("id", f"restler-{item.get('type', 'bug')}"),
+            "name": item.get("name", item.get("type", "API Fuzzing Finding")),
+            "severity": item.get("severity", "medium"),
+            "cwe": item.get("cwe", "CWE-20"),
+            "url": item.get("endpoint", item.get("url", "")),
+            "description": item.get("detail", item.get("description", "")),
+            "evidence": item.get("evidence", {}),
         })
     return findings
 
