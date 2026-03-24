@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from llm.base import LLMMessage  # noqa: E402
 from llm.registry import get_provider, list_providers  # noqa: E402
+from memory.scan_memory import ScanMemory  # noqa: E402
 
 REPORTS_DIR = Path(__file__).parent.parent / "reports"
 
@@ -155,8 +156,18 @@ def _auto_detect_provider() -> str | None:
     return None
 
 
-def analyze_with_llm(finding: dict, provider_name: str = "auto", model: str | None = None) -> dict:
+def analyze_with_llm(
+    finding: dict,
+    provider_name: str = "auto",
+    model: str | None = None,
+    scan_memory: ScanMemory | None = None,
+) -> dict:
     """Generate analysis using any configured LLM provider."""
+    # Build memory context if available
+    memory_context = ""
+    if scan_memory and scan_memory.available:
+        memory_context = scan_memory.get_context_for_analysis(finding)
+
     prompt = (
         f"Analyze this security finding for a bug bounty report:\n"
         f"- Tool: {finding.get('tool', 'unknown')}\n"
@@ -165,6 +176,10 @@ def analyze_with_llm(finding: dict, provider_name: str = "auto", model: str | No
         f"- URL: {finding.get('url', 'N/A')}\n"
         f"- Name: {finding.get('name', finding.get('id', 'N/A'))}\n"
         f"- CVSS: {finding.get('cvss_score', 'N/A')}\n\n"
+    )
+    if memory_context:
+        prompt += f"{memory_context}\n"
+    prompt += (
         f"Provide:\n"
         f"1. A clear explanation of the vulnerability\n"
         f"2. Business impact assessment\n"
@@ -229,7 +244,24 @@ def main() -> None:
     parser.add_argument("--model", default=None, help="Override model name for the provider")
     parser.add_argument("--max-llm", type=int, default=10,
                         help="Max findings to analyze with LLM (cost control)")
+    parser.add_argument("--memory", action="store_true", default=True,
+                        help="Enable Memory OS integration (default: on)")
+    parser.add_argument("--no-memory", action="store_true",
+                        help="Disable Memory OS integration")
     args = parser.parse_args()
+
+    # Initialize memory
+    scan_memory = None
+    if args.memory and not args.no_memory:
+        try:
+            scan_memory = ScanMemory()
+            if scan_memory.available:
+                print(f"Memory OS: connected ({scan_memory.stats().get('mode', 'unknown')} mode)")
+            else:
+                scan_memory = None
+        except Exception as e:
+            print(f"Memory OS: not available ({e})")
+            scan_memory = None
 
     if args.input:
         input_path = Path(args.input)
@@ -253,7 +285,7 @@ def main() -> None:
 
         # Use LLM only for critical/high findings (cost control)
         if use_llm and sev in ("critical", "high") and llm_count < args.max_llm:
-            analysis = analyze_with_llm(f, args.provider, args.model)
+            analysis = analyze_with_llm(f, args.provider, args.model, scan_memory)
             llm_count += 1
             print(f"  [LLM] {f.get('cwe_normalized', 'N/A')} {f.get('name', '')[:40]}")
         else:
@@ -276,6 +308,11 @@ def main() -> None:
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(output, indent=2, default=str))
+
+    # Ingest analyzed findings into memory for future recall
+    if scan_memory and scan_memory.available:
+        ingested = scan_memory.ingest_findings(analyzed)
+        print(f"Memory OS: ingested {ingested} findings for future recall")
 
     print(f"\nAnalyzed {len(analyzed)} findings ({llm_count} via LLM, "
           f"{len(analyzed) - llm_count} offline)")
