@@ -1,0 +1,50 @@
+# Scope Configuration Example
+# Supports: YAML, JSON, Markdown (bug bounty format)
+
+name: "Web Application Audit"
+
+targets:
+  - url: "https://app.example.com"
+    type: web
+    asset_value: high
+  - url: "https://api.example.com"
+    type: api
+    asset_value: high
+  - url: "https://staging.example.com"
+    type: web
+    asset_value: medium
+
+out_of_scope:
+  - "*.example.com"          # except targets above
+  - "https://docs.example.com"
+  - "https://status.example.com"
+  - "Third-party integrations"
+  - "Social engineering attacks"
+
+qualifying_vulns:
+  - "SQL Injection"
+  - "Cross-Site Scripting (XSS)"
+  - "Remote Code Execution"
+  - "Authentication Bypass"
+  - "IDOR / Broken Access Control"
+  - "Server-Side Request Forgery"
+  - "Sensitive Data Exposure"
+
+non_qualifying_vulns:
+  - "Self-XSS"
+  - "Missing security headers without impact"
+  - "Clickjacking without sensitive action"
+  - "CSRF on non-authenticated forms"
+  - "Rate limiting issues"
+
+rules:
+  - "Do not test on production data"
+  - "Do not perform DoS/DDoS"
+  - "Report before disclosing"
+  - "One finding per report"
+
+rewards:
+  low: 100
+  medium: 500
+  high: 2000
+  critical: 5000

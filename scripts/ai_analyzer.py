@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from llm.base import LLMMessage  # noqa: E402
 from llm.registry import get_provider, list_providers  # noqa: E402
 from memory.scan_memory import ScanMemory  # noqa: E402
+from scope import ScopeParser, ScopeEnforcer  # noqa: E402
 
 REPORTS_DIR = Path(__file__).parent.parent / "reports"
 
@@ -248,6 +249,8 @@ def main() -> None:
                         help="Enable Memory OS integration (default: on)")
     parser.add_argument("--no-memory", action="store_true",
                         help="Disable Memory OS integration")
+    parser.add_argument("--scope", "-s", default=None,
+                        help="Scope file (YAML/JSON/Markdown) to restrict analysis to in-scope findings")
     args = parser.parse_args()
 
     # Initialize memory
@@ -274,6 +277,16 @@ def main() -> None:
     data = json.loads(input_path.read_text())
     findings = data.get("findings", data) if isinstance(data, dict) else data
 
+    # Scope filtering
+    enforcer = None
+    if args.scope:
+        scope_config = ScopeParser.from_file(args.scope)
+        enforcer = ScopeEnforcer(scope_config)
+        before = len(findings)
+        findings = enforcer.filter_findings(findings)
+        print(f"Scope: {scope_config.name or args.scope} — "
+              f"{len(findings)}/{before} findings in scope")
+
     use_llm = not args.offline and (
         args.provider != "auto" or _auto_detect_provider() is not None
     )
@@ -295,14 +308,18 @@ def main() -> None:
         enriched["ai_analysis"] = analysis
         analyzed.append(enriched)
 
+    metadata: dict = {
+        "source": str(input_path),
+        "total": len(analyzed),
+        "llm_analyzed": llm_count,
+        "offline_analyzed": len(analyzed) - llm_count,
+        "provider": args.provider if use_llm else "offline",
+    }
+    if enforcer:
+        metadata["scope"] = enforcer.summary()
+
     output = {
-        "metadata": {
-            "source": str(input_path),
-            "total": len(analyzed),
-            "llm_analyzed": llm_count,
-            "offline_analyzed": len(analyzed) - llm_count,
-            "provider": args.provider if use_llm else "offline",
-        },
+        "metadata": metadata,
         "findings": analyzed,
     }
 
