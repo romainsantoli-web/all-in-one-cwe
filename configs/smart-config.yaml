@@ -1,0 +1,86 @@
+# Smart Mode Configuration
+# Combines: Scope → Memory → Graph → Scan → Analyze → Ingest
+
+# ── Scope ──────────────────────────────────────────────
+scope:
+  # Path to scope file (YAML/JSON/Markdown)
+  # file: configs/scope-example.yaml
+  file: ""
+
+  # Or inline targets
+  # targets:
+  #   - https://app.example.com
+  #   - https://api.example.com
+
+  # Enforce scope: filter out-of-scope findings
+  enforce: true
+
+  # Annotate findings with scope metadata (even if not filtering)
+  annotate: true
+
+# ── Memory ─────────────────────────────────────────────
+memory:
+  enabled: true
+
+  # Auto-ingest findings after scan
+  auto_ingest: true
+
+  # Recall similar past findings during analysis
+  recall_context: true
+
+  # Memory OS connection
+  # mode: auto  # auto (library → HTTP fallback), library, http
+  # http_url: http://localhost:8765
+
+# ── Graph ──────────────────────────────────────────────
+graph:
+  # Use dependency graph for smart tool selection
+  enabled: true
+
+  # Auto-suggest additional tools based on found CWEs
+  auto_suggest: true
+
+  # Export graph for dashboard after each scan
+  export_json: reports/tool-graph.json
+
+# ── LLM Analysis ──────────────────────────────────────
+llm:
+  # Provider: auto, claude, gpt, copilot-pro, mistral, gemini, copilot
+  provider: auto
+
+  # Max findings to analyze with LLM (cost control)
+  max_findings: 10
+
+  # Only analyze critical/high findings (skip medium/low)
+  severity_threshold: high
+
+# ── Scan Profile ───────────────────────────────────────
+scan:
+  # Base profile: light (15 tools), medium (~30), full (65)
+  profile: medium
+
+  # Smart adjustments:
+  # - Scope-based: only run tools relevant to target types
+  # - Graph-based: skip tools whose dependencies failed
+  # - Memory-based: prioritize tools that found vulns on similar targets
+  smart_select: true
+
+  # Per-tool timeout
+  timeout: 1800
+
+  # Rate limit
+  rate_limit: 50
+
+# ── Reporting ──────────────────────────────────────────
+reporting:
+  # Run full report pipeline after scan
+  auto_report: true
+
+  # Include scope summary in report
+  include_scope: true
+
+  # Include memory context in analysis
+  include_memory: true
+
+  # Dashboard export
+  dashboard: true

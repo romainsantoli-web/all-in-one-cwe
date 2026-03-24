@@ -17,6 +17,7 @@ export RATE_LIMIT ?= 50
 export SCAN_DATE
 export LLM_MODEL ?= gpt-3.5-turbo
 export LLM_TYPE ?= openai
+export SCOPE ?= configs/scope-example.yaml
 
 .PHONY: help setup run full dast sqli ssti dns sast secrets sca binary llm \
        recon fuzz waf tls cors network fingerprint api cloud \
@@ -58,6 +59,19 @@ scan-smart: ## Run DAG-orchestrated scan (Prefect — parallel + retries)
 
 scan-smart-dry: ## Dry-run the Prefect DAG (no actual scanning)
 	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) --dry-run
+
+# ── Smart Mode (Scope + Memory + Graph + LLM) ──────────
+scan-smart-ai: ## Smart scan — scope + memory + graph + LLM analysis
+	python scripts/smart_scan.py --target $(TARGET) --domain $(DOMAIN) \
+		--smart-select --rate-limit $(RATE_LIMIT)
+
+scan-smart-ai-scope: ## Smart scan with scope file
+	python scripts/smart_scan.py --scope $(SCOPE) --smart-select \
+		--rate-limit $(RATE_LIMIT)
+
+scan-smart-ai-dry: ## Dry-run smart pipeline (show tool selection)
+	python scripts/smart_scan.py --target $(TARGET) --domain $(DOMAIN) \
+		--smart-select --dry-run
 
 # ── Profile-based scans (light=15 tools, medium=~30, full=all) ──
 scan-light: ## Light scan — 15 essential tools, fast (~10 min)
