@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
 import SeverityBadge from "@/components/SeverityBadge";
 import type { Finding, ScanReport } from "@/lib/types";
 import { SEVERITY_ORDER, SEVERITY_COLORS } from "@/lib/types";
@@ -64,15 +63,12 @@ export default function ComparePage() {
   }, [reportA, reportB]);
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-4 mb-6">
-        <Link
-          href="/"
-          className="text-[var(--text-muted)] hover:text-[var(--text)]"
-        >
-          ← Dashboard
-        </Link>
+    <main className="px-6 py-6">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Compare Scans</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-0.5">
+          Select two scans to compare findings
+        </p>
       </div>
 
       {/* Selectors */}

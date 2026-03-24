@@ -1,5 +1,7 @@
+// ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 import type { Metadata } from "next";
 import "./globals.css";
+import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Security Dashboard — All-in-One CWE",
@@ -13,7 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <Sidebar />
+        <div className="main-content">{children}</div>
+      </body>
     </html>
   );
 }

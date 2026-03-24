@@ -3,18 +3,119 @@
 :root {
   --bg: #0a0a0a;
   --card-bg: #111111;
+  --card-bg-hover: #161616;
   --border: #222222;
+  --border-hover: #333333;
   --text: #ededed;
   --text-muted: #888888;
+  --text-dim: #555555;
+  --accent: #6366f1;
+  --accent-dim: #4f46e5;
   --critical: #ef4444;
   --high: #f97316;
   --medium: #eab308;
   --low: #22c55e;
   --info: #3b82f6;
+  --sidebar-w: 240px;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+.sidebar-brand {
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sidebar-link:hover {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.sidebar-link.active {
+  color: var(--text);
+  background: var(--accent-dim);
+}
+
+.sidebar-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.main-content {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+}
+
+/* Stat card animations */
+.stat-card {
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.stat-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+/* Score ring */
+.score-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  border: 3px solid;
+}
+
+/* Responsive: collapse sidebar on small screens */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
 }

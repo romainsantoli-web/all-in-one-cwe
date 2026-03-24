@@ -1,9 +1,11 @@
 # Reports (generated)
 reports/**/*.json
+reports/**/*.jsonl
 reports/**/*.html
 reports/**/*.txt
 reports/**/*.csv
 reports/**/*.xml
+reports/**/*.md
 !reports/.gitkeep
 
 # Environment
@@ -19,6 +21,11 @@ auth.env.json
 __pycache__/
 *.pyc
 .venv/
+
+# Node
+node_modules/
+.next/
+dashboard/.next/
 
 # OS
 .DS_Store

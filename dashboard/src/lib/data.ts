@@ -4,6 +4,7 @@ import { join } from "path";
 import type { ScanReport } from "./types";
 
 const REPORTS_DIR = process.env.REPORTS_DIR || "/data/reports/unified";
+const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 
 /** List available scan report files (sorted newest first). */
 export async function listScans(): Promise<string[]> {
@@ -52,5 +53,36 @@ export async function loadLatestScan(): Promise<ScanReport | null> {
   // Fallback: try the latest file
   const files = await listScans();
   if (files.length > 0) return loadScan(files[0]);
+  return null;
+}
+
+/** Payload stats shape. */
+export interface PayloadStats {
+  patt_categories: number;
+  patt_files: number;
+  patt_payloads: number;
+  patt_commit_hash: string;
+  patt_commit_date: string;
+  patt_age_days: number | null;
+  patt_stale: boolean;
+  curated_files: number;
+  indexed_at: string;
+  categories: { name: string; cwe: string; files: number; payloads: number }[];
+}
+
+/** Load payload engine stats from reports/payload-stats.json. */
+export async function loadPayloadStats(): Promise<PayloadStats | null> {
+  const candidates = [
+    join(PROJECT_ROOT, "reports", "payload-stats.json"),
+    join(REPORTS_DIR, "..", "payload-stats.json"),
+  ];
+  for (const path of candidates) {
+    try {
+      const raw = await readFile(path, "utf-8");
+      return JSON.parse(raw) as PayloadStats;
+    } catch {
+      // try next
+    }
+  }
   return null;
 }
