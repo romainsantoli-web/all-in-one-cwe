@@ -21,6 +21,7 @@ from prefect.futures import wait
 from orchestrator.config import PARALLEL_GROUPS, TOOL_META
 from orchestrator.tasks.conditional import route_findings
 from orchestrator.tasks.docker_task import ScanResult, run_docker_tool
+from orchestrator.tasks.payload_task import get_smart_payloads
 
 logger = logging.getLogger("orchestrator.scan_flow")
 
@@ -114,6 +115,15 @@ def security_scan(scan_ctx: dict) -> dict:
     # ── Conditional routing ───────────────────────────────────────
     triggered = route_findings(all_results, scan_ctx)
     all_results.extend(triggered)
+
+    # ── Payload enrichment (after conditionals, before report) ────
+    if scan_ctx.get("smart_payloads") and not scan_ctx.get("dry_run"):
+        payload_map = get_smart_payloads(all_results, scan_ctx)
+        if payload_map:
+            logger.info(
+                "Smart payloads: %d scanners enriched",
+                len(payload_map),
+            )
 
     # ── Report generation ─────────────────────────────────────────
     if not scan_ctx.get("dry_run"):

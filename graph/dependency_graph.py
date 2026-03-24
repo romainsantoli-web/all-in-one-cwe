@@ -225,6 +225,27 @@ class DependencyGraph:
 
         return suggestions
 
+    def suggest_payloads(self, findings: list[dict]) -> dict[str, list[str]]:
+        """Suggest payload categories based on scan findings.
+
+        Returns: dict mapping CWE → list of PATT category names.
+        """
+        from payloads.index import get_categories_for_cwe
+
+        found_cwes: set[str] = set()
+        for f in findings:
+            cwe = f.get("cwe_normalized") or f.get("cwe") or ""
+            if cwe:
+                found_cwes.add(str(cwe).upper())
+
+        result: dict[str, list[str]] = {}
+        for cwe in sorted(found_cwes):
+            cats = get_categories_for_cwe(cwe)
+            if cats:
+                result[cwe] = cats
+
+        return result
+
     def _build_cwe_tool_map(self) -> dict[str, list[str]]:
         """Build reverse map: CWE → tools that detect it."""
         # This is a simplified mapping based on common knowledge
