@@ -1762,6 +1762,23 @@ services:
       - "/spec/openapi.yaml"
     profiles: ["api-fuzzing"]
 
+  # ============================================================
+  # Dashboard — Next.js results viewer (port 3000)
+  # ============================================================
+  dashboard:
+    <<: *common
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./reports/unified:/data/reports/unified:ro
+    environment:
+      - REPORTS_DIR=/data/reports/unified
+      - NODE_ENV=production
+    profiles: ["dashboard"]
+
 volumes:
   trivy-cache:
   dependency-check-data:
