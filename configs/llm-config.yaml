@@ -1,0 +1,48 @@
+# LLM Provider Configuration
+# ---
+# Default settings for the AI analyzer multi-provider engine.
+# Override via CLI flags: --provider, --model, --max-llm
+
+default_provider: auto
+# auto = detect best available provider from env vars:
+#   COPILOT_JWT → copilot-pro
+#   ANTHROPIC_API_KEY → claude
+#   OPENAI_API_KEY → gpt
+#   MISTRAL_API_KEY → mistral
+#   GEMINI_API_KEY → gemini
+#   GITHUB_TOKEN → copilot
+
+# Per-provider defaults
+providers:
+  claude:
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 500
+  gpt:
+    model: gpt-4o
+    temperature: 0.3
+    max_tokens: 500
+  copilot-pro:
+    model: claude-sonnet-4.6
+    temperature: 0.3
+    max_tokens: 500
+  copilot:
+    model: gpt-4o
+    temperature: 0.3
+    max_tokens: 500
+  mistral:
+    model: mistral-large-latest
+    temperature: 0.3
+    max_tokens: 500
+  gemini:
+    model: models/gemini-3-flash-preview
+    temperature: 0.3
+    max_tokens: 500
+
+# Cost control
+analysis:
+  max_llm_findings: 10          # max findings analyzed via LLM per run
+  severity_filter:               # only send these severities to LLM
+    - critical
+    - high
+  timeout_seconds: 30

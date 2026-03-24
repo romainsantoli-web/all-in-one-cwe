@@ -20,6 +20,12 @@ import os
 import sys
 from pathlib import Path
 
+# Allow imports from parent dir (llm/ package)
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from llm.base import LLMMessage  # noqa: E402
+from llm.registry import get_provider, list_providers  # noqa: E402
+
 REPORTS_DIR = Path(__file__).parent.parent / "reports"
 
 # ---------------------------------------------------------------------------
@@ -131,8 +137,26 @@ def analyze_offline(finding: dict) -> dict:
     }
 
 
-def analyze_with_llm(finding: dict, provider: str = "anthropic") -> dict:
-    """Generate analysis using Claude or GPT API."""
+def _auto_detect_provider() -> str | None:
+    """Auto-detect best available provider from env vars."""
+    # Priority: Copilot Pro (free) > Anthropic > OpenAI > Mistral > Gemini > Copilot
+    if os.path.exists("/tmp/copilot_token.json") or os.environ.get("COPILOT_JWT"):
+        return "copilot-pro"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "claude"
+    if os.environ.get("OPENAI_API_KEY"):
+        return "gpt"
+    if os.environ.get("MISTRAL_API_KEY"):
+        return "mistral"
+    if os.environ.get("GEMINI_API_KEY"):
+        return "gemini"
+    if os.environ.get("GITHUB_TOKEN"):
+        return "copilot"
+    return None
+
+
+def analyze_with_llm(finding: dict, provider_name: str = "auto", model: str | None = None) -> dict:
+    """Generate analysis using any configured LLM provider."""
     prompt = (
         f"Analyze this security finding for a bug bounty report:\n"
         f"- Tool: {finding.get('tool', 'unknown')}\n"
@@ -149,82 +173,39 @@ def analyze_with_llm(finding: dict, provider: str = "anthropic") -> dict:
         f"Format as JSON with keys: explanation, impact, poc_suggestion, remediation"
     )
 
+    resolved = provider_name if provider_name != "auto" else _auto_detect_provider()
+    if not resolved:
+        result = analyze_offline(finding)
+        result["analysis_mode"] = "offline_no_provider"
+        return result
+
     try:
-        if provider == "anthropic" and os.environ.get("ANTHROPIC_API_KEY"):
-            return _call_anthropic(prompt)
-        elif provider == "openai" and os.environ.get("OPENAI_API_KEY"):
-            return _call_openai(prompt)
+        kwargs: dict = {}
+        if model:
+            kwargs["model"] = model
+        provider = get_provider(resolved, **kwargs)
+        response = provider.simple_chat(prompt, max_tokens=500)
+
+        try:
+            parsed = json.loads(response)
+            parsed["analysis_mode"] = resolved
+            parsed["model"] = provider.model
+            return parsed
+        except json.JSONDecodeError:
+            return {
+                "explanation": response,
+                "impact": "",
+                "poc_suggestion": "",
+                "remediation": "",
+                "analysis_mode": f"{resolved}_raw",
+                "model": provider.model,
+            }
     except Exception as e:
         print(f"  LLM analysis failed ({e}), falling back to offline")
 
-    # Fallback to offline
     result = analyze_offline(finding)
     result["analysis_mode"] = "offline_fallback"
     return result
-
-
-def _call_anthropic(prompt: str) -> dict:
-    import requests
-    resp = requests.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 500,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=30,
-    )
-    resp.raise_for_status()
-    text = resp.json()["content"][0]["text"]
-    try:
-        parsed = json.loads(text)
-        parsed["analysis_mode"] = "anthropic"
-        return parsed
-    except json.JSONDecodeError:
-        return {
-            "explanation": text,
-            "impact": "",
-            "poc_suggestion": "",
-            "remediation": "",
-            "analysis_mode": "anthropic_raw",
-        }
-
-
-def _call_openai(prompt: str) -> dict:
-    import requests
-    resp = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": "gpt-4o-mini",
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 500,
-            "response_format": {"type": "json_object"},
-        },
-        timeout=30,
-    )
-    resp.raise_for_status()
-    text = resp.json()["choices"][0]["message"]["content"]
-    try:
-        parsed = json.loads(text)
-        parsed["analysis_mode"] = "openai"
-        return parsed
-    except json.JSONDecodeError:
-        return {
-            "explanation": text,
-            "impact": "",
-            "poc_suggestion": "",
-            "remediation": "",
-            "analysis_mode": "openai_raw",
-        }
 
 
 def _find_latest_report() -> Path | None:
@@ -243,7 +224,9 @@ def main() -> None:
     parser.add_argument("--input", "-i", help="Input report JSON")
     parser.add_argument("--output", "-o", default="reports/analyzed-report.json")
     parser.add_argument("--offline", action="store_true", help="Offline mode (no LLM API)")
-    parser.add_argument("--provider", choices=["anthropic", "openai"], default="anthropic")
+    parser.add_argument("--provider", default="auto",
+                        help=f"LLM provider: auto, {', '.join(list_providers())} (default: auto)")
+    parser.add_argument("--model", default=None, help="Override model name for the provider")
     parser.add_argument("--max-llm", type=int, default=10,
                         help="Max findings to analyze with LLM (cost control)")
     args = parser.parse_args()
@@ -259,9 +242,8 @@ def main() -> None:
     data = json.loads(input_path.read_text())
     findings = data.get("findings", data) if isinstance(data, dict) else data
 
-    use_llm = (
-        not args.offline
-        and (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY"))
+    use_llm = not args.offline and (
+        args.provider != "auto" or _auto_detect_provider() is not None
     )
 
     analyzed = []
@@ -271,7 +253,7 @@ def main() -> None:
 
         # Use LLM only for critical/high findings (cost control)
         if use_llm and sev in ("critical", "high") and llm_count < args.max_llm:
-            analysis = analyze_with_llm(f, args.provider)
+            analysis = analyze_with_llm(f, args.provider, args.model)
             llm_count += 1
             print(f"  [LLM] {f.get('cwe_normalized', 'N/A')} {f.get('name', '')[:40]}")
         else:
