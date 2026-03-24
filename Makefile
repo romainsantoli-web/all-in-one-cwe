@@ -24,6 +24,7 @@ export LLM_TYPE ?= openai
        crlf ssrf container-lint frontend-sca log4shell osint openapi proto-pollution graphql-deep cms \
        idor auth-bypass user-enum notif-inject redirect-cors oidc-audit bypass-403-adv ssrf-scan xss-scan api-discovery secret-leak python-scanners \
        auth-extract auth-scan \
+       scan-smart prefect-ui prefect-status report-smart \
        zap-gui report summary defectdojo-import clean nuke
 
 help: ## Show this help
@@ -46,6 +47,29 @@ run: ## Run ALL scans (DAST+DNS+SAST+Secrets+SCA) on TARGET
 full: ## Run ALL scans in thorough mode (slower)
 	./runner.sh $(TARGET) --domain $(DOMAIN) --code $(CODE) --repo $(REPO) \
 		--rate-limit $(RATE_LIMIT) --full
+
+# ── Prefect orchestrator ────────────────────────────────
+scan-smart: ## Run DAG-orchestrated scan (Prefect — parallel + retries)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
+		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT)
+
+scan-smart-dry: ## Dry-run the Prefect DAG (no actual scanning)
+	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) --dry-run
+
+prefect-ui: ## Start Prefect server UI (port 4200)
+	docker compose --profile orchestrator up -d prefect-server
+	@echo "Prefect UI: http://localhost:4200"
+
+prefect-status: ## Check Prefect server status
+	@curl -s http://localhost:4200/api/health 2>/dev/null && echo "Prefect server is running" || echo "Prefect server is not running"
+
+# ── Smart reporting (Phase 2) ───────────────────────────
+report-smart: ## Generate intelligent report (dedup + CVSS + AI + dashboard)
+	python3 scripts/dedup_engine.py
+	python3 scripts/scoring_engine.py
+	python3 scripts/ai_analyzer.py
+	python3 scripts/generate_dashboard.py
+	@echo "Dashboard: reports/dashboard.html"
 
 # ── Individual tool targets ─────────────────────────────
 dast: ## DAST scan only (Nuclei + ZAP) — TARGET required

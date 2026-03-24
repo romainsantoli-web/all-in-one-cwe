@@ -1588,6 +1588,43 @@ services:
       - CSRF_TOKEN=${CSRF_TOKEN:-}
     profiles: ["python-scanners"]
 
+  # ============================================================
+  # 41. Prefect Server — Orchestration UI + API (port 4200)
+  # ============================================================
+  prefect-server:
+    <<: *common
+    image: prefecthq/prefect:3-latest
+    command: ["prefect", "server", "start", "--host", "0.0.0.0"]
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+    profiles: ["orchestrator"]
+
+  # ============================================================
+  # 42. Prefect Worker — Executes flow runs
+  # ============================================================
+  prefect-worker:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN pip install --no-cache-dir prefect>=3.0 pyyaml>=6.0
+        COPY orchestrator/ /app/orchestrator/
+        COPY scripts/ /app/scripts/
+        WORKDIR /app
+    command: ["prefect", "worker", "start", "--pool", "default"]
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    depends_on:
+      - prefect-server
+    volumes:
+      - ./reports:/app/reports
+      - ./configs:/app/configs:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    profiles: ["orchestrator"]
+
 volumes:
   trivy-cache:
   dependency-check-data:
