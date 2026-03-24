@@ -84,3 +84,21 @@ reporting:
 
   # Dashboard export
   dashboard: true
+
+# ── Payloads ───────────────────────────────────────────
+payloads:
+  # Enable PayloadEngine integration
+  enabled: true
+
+  # Include HIGH-risk payloads (reverse shells, exfil)
+  # Default: false (only LOW + MEDIUM)
+  include_high: false
+
+  # Use AI to generate context-aware payloads
+  ai_generate: false
+
+  # LLM provider for AI generation (uses llm.provider if not set)
+  # ai_provider: claude
+
+  # Export enriched payloads to reports/payloads/
+  export: true

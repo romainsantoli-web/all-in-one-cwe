@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from graph import DependencyGraph  # noqa: E402
 from memory.scan_memory import ScanMemory  # noqa: E402
+from payloads import RiskLevel  # noqa: E402
 from scope import ScopeEnforcer, ScopeParser  # noqa: E402
 
 logger = logging.getLogger("smart_scan")
@@ -292,6 +293,59 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
         if suggestions:
             result["pipeline_steps"].append("graph_suggestions")
             print(f"[graph] Suggested follow-up tools: {', '.join(suggestions)}")
+
+        # Payload suggestions from CWEs
+        payload_suggestions = graph.suggest_payloads(findings)
+        if payload_suggestions:
+            result["pipeline_steps"].append("payload_suggestions")
+            result["payload_categories"] = payload_suggestions
+            for cwe, cats in payload_suggestions.items():
+                print(f"[payloads] {cwe} → {', '.join(cats)}")
+
+    # ── Step 9: Payload enrichment ─────────────────────
+    payload_cfg = config.get("payloads", {})
+    if payload_cfg.get("enabled", True) and findings and not args.dry_run:
+        try:
+            from payloads.engine import PayloadEngine
+
+            include_high = payload_cfg.get("include_high", False)
+            engine = PayloadEngine(include_high=include_high)
+
+            # Collect CWEs from findings
+            found_cwes = set()
+            for f in findings:
+                cwe = f.get("cwe") or f.get("cwe_normalized") or ""
+                if cwe:
+                    found_cwes.add(str(cwe).upper())
+
+            if found_cwes:
+                total_payloads = 0
+                for cwe in sorted(found_cwes):
+                    sets = engine.get_payloads_for_cwe(cwe)
+                    for ps in sets:
+                        total_payloads += ps.count
+
+                result["payload_count"] = total_payloads
+                result["pipeline_steps"].append("payload_loaded")
+                stats = engine.stats()
+                print(f"[payloads] {total_payloads} payloads enriched from {len(found_cwes)} CWEs "
+                      f"(PATT: {stats['patt_commit_hash']} — {stats['patt_age_days']}d old)")
+
+                if stats.get("patt_stale"):
+                    print("[payloads] ⚠ PATT submodule > 30 days old — run: make payload-update")
+
+            # AI payload generation (if configured)
+            if payload_cfg.get("ai_generate", False) and not args.offline:
+                from payloads.generator import PayloadGenerator
+
+                gen = PayloadGenerator(max_risk=RiskLevel.MEDIUM if not include_high else RiskLevel.HIGH)
+                ai_suggestions = gen.suggest_categories(findings[:20])
+                if ai_suggestions:
+                    result["pipeline_steps"].append("payload_ai_suggest")
+                    print(f"[payloads] AI suggested {len(ai_suggestions)} categories for deeper testing")
+
+        except ImportError as e:
+            logger.warning("PayloadEngine not available: %s", e)
 
     # ── Summary ────────────────────────────────────────
     print(f"\n{'='*60}")

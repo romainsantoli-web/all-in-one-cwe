@@ -73,6 +73,27 @@ scan-smart-ai-dry: ## Dry-run smart pipeline (show tool selection)
 	python scripts/smart_scan.py --target $(TARGET) --domain $(DOMAIN) \
 		--smart-select --dry-run
 
+# ── Payload management ──────────────────────────────────
+payload-update: ## Update PayloadsAllTheThings submodule to latest
+	cd payloads/PayloadsAllTheThings && git pull origin master
+	PYTHONPATH=. python -c "from payloads.index import build_index; build_index(force=True)"
+	@echo "PATT updated and index rebuilt."
+
+payload-index: ## Rebuild PATT index (force refresh .cache/patt-index.json)
+	PYTHONPATH=. python -c "from payloads.index import build_index; build_index(force=True)"
+
+payload-stats: ## Show payload engine statistics + PATT freshness
+	@PYTHONPATH=. python -c "\
+	from payloads.engine import PayloadEngine; \
+	from payloads.index import patt_age_days, _get_patt_commit_info; \
+	e = PayloadEngine(); s = e.stats(); \
+	ci = _get_patt_commit_info(); \
+	print(f'PATT commit: {ci[\"commit_hash\"][:8]} ({patt_age_days():.0f} days old)'); \
+	print(f'Categories: {s[\"patt_categories\"]}  |  Files: {s[\"patt_files\"]}  |  Payloads: {s[\"total_payloads\"]}'); \
+	print(f'Curated sets: {s[\"curated_sets\"]}'); \
+	age = patt_age_days(); \
+	print('⚠️  PATT is stale (>30 days) — run: make payload-update' if age > 30 else '✓ PATT is fresh')"
+
 # ── Profile-based scans (light=15 tools, medium=~30, full=all) ──
 scan-light: ## Light scan — 15 essential tools, fast (~10 min)
 	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
