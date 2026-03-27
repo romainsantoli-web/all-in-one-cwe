@@ -1746,7 +1746,357 @@ services:
     profiles: ["python-scanners"]
 
   # ============================================================
-  # 48. RESTler — Stateful REST API Fuzzer (Microsoft)
+  # 48. WAF Bypass — CWE-178, CWE-434, CWE-89, CWE-79
+  # ============================================================
+  waf-bypass:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/waf-bypass:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/waf_bypass.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/waf-bypass-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 49. Source Map Scanner — CWE-215, CWE-798
+  # ============================================================
+  source-map-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/source-map-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/source_map_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 50. Hidden Endpoint Scanner — CWE-215, CWE-548
+  # ============================================================
+  hidden-endpoint-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/hidden-endpoint-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/hidden_endpoint_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 51. HATEOAS Fuzzer — CWE-639, CWE-284
+  # ============================================================
+  hateoas-fuzzer:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/hateoas-fuzzer:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/hateoas_fuzzer.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/business-logic-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+      - AUTH_HEADERS=${AUTH_HEADERS:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 52. Coupon/Promo Fuzzer — CWE-639, CWE-915
+  # ============================================================
+  coupon-promo-fuzzer:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/coupon-promo-fuzzer:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/coupon_promo_fuzzer.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+      - "--config"
+      - "/configs/business-logic-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 53. Response PII Detector — CWE-200
+  # ============================================================
+  response-pii-detector:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/response-pii-detector:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/response_pii_detector.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 54. Header Classifier — CWE-200
+  # ============================================================
+  header-classifier:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/header-classifier:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/header_classifier.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 55. Timing Oracle — CWE-208, CWE-918
+  # ============================================================
+  timing-oracle:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/timing-oracle:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/timing_oracle.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-20}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 56. OAuth Flow Scanner — CWE-601, CWE-613
+  # ============================================================
+  oauth-flow-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/oauth-flow-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/oauth_flow_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-30}"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+      - AUTH_COOKIES=${AUTH_COOKIES:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 57. CDP Token Extractor — CWE-320, CWE-347
+  # ============================================================
+  cdp-token-extractor:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        RUN pip install --no-cache-dir websockets
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/cdp-token-extractor:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/cdp_token_extractor.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--cdp-url"
+      - "${CDP_URL:-ws://host.docker.internal:9222}"
+    environment:
+      - CDP_URL=${CDP_URL:-}
+    profiles: ["cdp-scanners"]
+
+  # ============================================================
+  # 58. CDP Checkout Interceptor — CWE-915, CWE-362
+  # ============================================================
+  cdp-checkout-interceptor:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        RUN pip install --no-cache-dir websockets
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/cdp-checkout-interceptor:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/cdp_checkout_interceptor.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--cdp-url"
+      - "${CDP_URL:-ws://host.docker.internal:9222}"
+    environment:
+      - CDP_URL=${CDP_URL:-}
+    profiles: ["cdp-scanners"]
+
+  # ============================================================
+  # 59. CDP Credential Scanner — CWE-798, CWE-321
+  # ============================================================
+  cdp-credential-scanner:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        RUN pip install --no-cache-dir websockets
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/cdp-credential-scanner:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/cdp_credential_scanner.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--cdp-url"
+      - "${CDP_URL:-ws://host.docker.internal:9222}"
+    environment:
+      - CDP_URL=${CDP_URL:-}
+    profiles: ["cdp-scanners"]
+
+  # ============================================================
+  # 60. RESTler — Stateful REST API Fuzzer (Microsoft)
   # CWE-20, CWE-89, CWE-200
   # ============================================================
   restler:

@@ -5,6 +5,7 @@ import { useState, useMemo, Fragment } from "react";
 import type { Finding } from "@/lib/types";
 import SeverityBadge from "./SeverityBadge";
 import AskAIButton from "./AskAIButton";
+import SmartAnalyzeButton from "./SmartAnalyzeButton";
 import { SEVERITY_ORDER } from "@/lib/types";
 
 export default function FindingsTable({ findings }: { findings: Finding[] }) {
@@ -226,7 +227,10 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
                               </span>
                             )}
                           </div>
-                          <AskAIButton finding={f} />
+                          <div className="flex gap-2 items-center flex-wrap">
+                            <AskAIButton finding={f} />
+                            <SmartAnalyzeButton finding={f} target={f.url || f.endpoint} />
+                          </div>
                         </div>
                       </td>
                     </tr>

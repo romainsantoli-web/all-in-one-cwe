@@ -1,0 +1,48 @@
+# Business Logic Scanner Configuration
+# Shared config for hateoas-fuzzer, coupon-promo-fuzzer, response-pii-detector.
+
+# HATEOAS fuzzer settings
+hateoas:
+  # Max depth of link following
+  max_depth: 3
+  # HTTP methods to fuzz discovered links
+  methods: [GET, POST, PUT, PATCH, DELETE]
+  # Custom entry points (appended to auto-discovered)
+  # entry_points:
+  #   - "/api/v1/resources"
+  #   - "/api/v2/users"
+
+# Coupon/Promo fuzzer settings
+coupon:
+  # Endpoints to probe for promo abuse
+  # cart_endpoints:
+  #   - "/api/cart"
+  #   - "/api/checkout"
+  # promo_endpoints:
+  #   - "/api/promo/apply"
+  #   - "/api/coupon/redeem"
+
+  # Test promo codes (common weak patterns)
+  test_codes:
+    - "TEST"
+    - "PROMO"
+    - "DISCOUNT"
+    - "FREE"
+    - "100OFF"
+    - "WELCOME"
+
+  # Max concurrent coupon stacking attempts
+  max_stack_attempts: 5
+
+  # Negative price testing
+  negative_price_test: true
+
+# PII detector settings
+pii:
+  # Additional PII field names to detect (merged with defaults)
+  # extra_fields:
+  #   - "tax_id"
+  #   - "passport_number"
+
+  # Maximum response body size to scan (bytes)
+  max_response_size: 1048576  # 1 MB

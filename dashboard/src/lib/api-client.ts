@@ -68,6 +68,14 @@ export interface LLMAgentRequest {
   maxSteps?: number;
 }
 
+export interface SmartAnalyzeRequest {
+  finding: { title: string; severity: string; cwe?: string; description?: string; evidence?: string; url?: string; tool: string };
+  target: string;
+  phase: "suggest" | "execute";
+  provider?: string;
+  confirmedTools?: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
@@ -221,6 +229,48 @@ export function streamAgent(req: LLMAgentRequest): ReadableStream<string> {
       });
       if (!res.ok || !res.body) {
         controller.error(new Error(`LLM agent error: ${res.status}`));
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          for (const line of text.split("\n")) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6);
+              if (data === "[DONE]") {
+                controller.close();
+                return;
+              }
+              controller.enqueue(data);
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+        controller.close();
+      }
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Smart Analyze SSE (2-phase: suggest → execute)
+// ---------------------------------------------------------------------------
+
+export function streamSmartAnalyze(req: SmartAnalyzeRequest): ReadableStream<string> {
+  return new ReadableStream<string>({
+    async start(controller) {
+      const res = await fetch("/api/llm/smart-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      });
+      if (!res.ok || !res.body) {
+        controller.error(new Error(`Smart analyze error: ${res.status}`));
         return;
       }
       const reader = res.body.getReader();

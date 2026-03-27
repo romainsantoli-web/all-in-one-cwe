@@ -3,10 +3,13 @@
 
 import { getAllTools, PARALLEL_GROUPS, LIGHT_TOOLS, MEDIUM_TOOLS, CWE_TRIGGERS } from "@/lib/tools-data";
 import type { ToolMeta } from "@/lib/tools-data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ToolRunner from "@/components/ToolRunner";
 
 export const dynamic = "force-dynamic";
+
+interface CdpStatus { available: boolean; url: string; host?: string; port?: number; launchHint?: string | null }
+
 
 const GROUP_COLORS: Record<string, string> = {
   recon: "#4CAF50",
@@ -101,9 +104,17 @@ function ToolCard({ tool, inLight, inMedium, onRun }: { tool: ToolMeta; inLight:
 
 export default function ToolsPage() {
   const [runningTool, setRunningTool] = useState<string | null>(null);
+  const [cdpStatus, setCdpStatus] = useState<CdpStatus | null>(null);
   const tools = getAllTools();
   const lightSet = new Set(LIGHT_TOOLS);
   const mediumSet = new Set(MEDIUM_TOOLS);
+
+  useEffect(() => {
+    fetch("/api/cdp/status")
+      .then((r) => r.json())
+      .then((data: CdpStatus) => setCdpStatus(data))
+      .catch(() => setCdpStatus({ available: false, url: "ws://localhost:9222" }));
+  }, []);
 
   // Group tools by parallel group
   const grouped: Record<string, ToolMeta[]> = {};
@@ -184,6 +195,36 @@ export default function ToolsPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* CDP Browser Status */}
+      <div className={`border rounded-lg p-4 mb-6 ${cdpStatus?.available ? "bg-green-900/10 border-green-800/30" : "bg-[var(--card-bg)] border-[var(--border)]"}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🌐</span>
+            <div>
+              <h3 className="font-semibold text-sm">Chrome DevTools Protocol (CDP)</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                Required for cdp-token-extractor, cdp-checkout-interceptor, cdp-credential-scanner
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`inline-block w-2.5 h-2.5 rounded-full ${cdpStatus?.available ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
+            <span className={`text-xs font-medium ${cdpStatus?.available ? "text-green-400" : "text-red-400"}`}>
+              {cdpStatus === null ? "Checking..." : cdpStatus.available ? "Connected" : "Not available"}
+            </span>
+          </div>
+        </div>
+        {cdpStatus && !cdpStatus.available && cdpStatus.launchHint && (
+          <div className="mt-3 p-2 bg-[var(--bg)] rounded">
+            <p className="text-xs text-[var(--text-muted)] mb-1">Launch Chrome headless to enable CDP tools:</p>
+            <code className="text-xs text-[var(--accent)] font-mono break-all">{cdpStatus.launchHint}</code>
+          </div>
+        )}
+        {cdpStatus?.available && (
+          <p className="mt-2 text-xs text-green-300/70">Connected to {cdpStatus.url}</p>
+        )}
       </div>
 
       {/* Tools by group */}

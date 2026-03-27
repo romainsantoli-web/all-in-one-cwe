@@ -1,0 +1,68 @@
+# CDP (Chrome DevTools Protocol) Scanner Configuration
+# Shared config for cdp-token-extractor, cdp-checkout-interceptor, cdp-credential-scanner.
+
+# CDP connection
+cdp:
+  # WebSocket URL to Chrome remote debugging
+  # Override via CDP_URL env var or --cdp-url flag
+  url: "ws://localhost:9222"
+
+  # Connection timeout (seconds)
+  connect_timeout: 10
+
+  # Max wait for page load (seconds)
+  page_load_timeout: 30
+
+# Token extractor settings
+token_extractor:
+  # Network request patterns to monitor
+  # url_patterns:
+  #   - "*api*"
+  #   - "*auth*"
+  #   - "*token*"
+
+  # Headers to capture (case-insensitive)
+  capture_headers:
+    - "authorization"
+    - "x-api-key"
+    - "x-access-token"
+    - "x-csrf-token"
+    - "cookie"
+
+  # Max capture duration (seconds)
+  capture_duration: 60
+
+# Checkout interceptor settings
+checkout:
+  # Intercept patterns for checkout requests
+  # intercept_patterns:
+  #   - "*checkout*"
+  #   - "*payment*"
+  #   - "*order*"
+
+  # Fields to watch for price modification
+  price_fields:
+    - "price"
+    - "total"
+    - "amount"
+    - "subtotal"
+    - "discount"
+    - "quantity"
+
+# Credential scanner settings
+credentials:
+  # JS bundle patterns to scan
+  bundle_patterns:
+    - "*.js"
+    - "*.chunk.js"
+    - "*.bundle.js"
+
+  # Nuxt/Next hydration state keys
+  hydration_keys:
+    - "__NUXT__"
+    - "__NEXT_DATA__"
+    - "__INITIAL_STATE__"
+    - "window.__APP_STATE__"
+
+  # Max JS bundle size to scan (bytes)
+  max_bundle_size: 5242880  # 5 MB

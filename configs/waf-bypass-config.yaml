@@ -1,0 +1,36 @@
+# WAF Bypass Scanner Configuration
+# Techniques to test WAF evasion on the target.
+
+# Encoding techniques to try
+encodings:
+  - double-url      # %25xx
+  - unicode          # %u0041
+  - overlong-utf8    # %c0%af
+  - null-byte        # %00
+  - backslash        # path\..
+  - mixed-case       # /AdMiN
+
+# Path confusion patterns
+path_patterns:
+  - suffix: ".json"
+  - suffix: ".css"
+  - suffix: ";.css"
+  - prefix: "/static/../"
+  - prefix: "/images/../"
+
+# HTTP Parameter Pollution (HPP) — duplicate params
+hpp_enabled: true
+
+# Max payloads per technique (rate safety)
+max_payloads_per_technique: 20
+
+# Custom paths to test (merged with defaults)
+# custom_paths:
+#   - "/admin"
+#   - "/api/internal"
+
+# HTTP methods to try
+methods:
+  - GET
+  - POST
+  - PUT
