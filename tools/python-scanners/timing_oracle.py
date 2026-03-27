@@ -328,6 +328,8 @@ def scan_token_timing(
 
 
 def main() -> None:
+    global TIMING_THRESHOLD_MS, TIMING_SAMPLES
+
     parser = parse_base_args()
     parser.add_argument("--threshold-ms", type=int, default=TIMING_THRESHOLD_MS,
                         help="Timing difference threshold in ms (default: 100)")
@@ -339,7 +341,6 @@ def main() -> None:
         import logging
         logging.getLogger().setLevel(logging.DEBUG)
 
-    global TIMING_THRESHOLD_MS, TIMING_SAMPLES
     TIMING_THRESHOLD_MS = args.threshold_ms
     TIMING_SAMPLES = args.samples
 

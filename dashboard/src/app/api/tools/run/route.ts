@@ -2,12 +2,25 @@
 import { NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { join } from "path";
+import { readFile } from "fs/promises";
 import { createJob, updateJob } from "@/lib/jobs";
 import { TOOL_META } from "@/lib/tools-data";
+
+async function countFindings(toolName: string): Promise<number> {
+  try {
+    const reportPath = join(PROJECT_ROOT, "reports", toolName, "scan-latest.json");
+    const raw = await readFile(reportPath, "utf-8");
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) return data.length;
+    if (data && Array.isArray(data.findings)) return data.findings.length;
+  } catch { /* report not found or invalid */ }
+  return 0;
+}
 
 export const dynamic = "force-dynamic";
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
 const MAX_TARGET_LEN = 2048;
 
 function isValidTarget(target: string): boolean {
@@ -64,7 +77,7 @@ export async function POST(request: Request) {
     const scriptPath = join(PROJECT_ROOT, "tools", "python-scanners", scriptName);
     const args = [scriptPath, "--target", target];
 
-    const child = spawn("python3", args, {
+    const child = spawn(PYTHON_BIN, args, {
       cwd: PROJECT_ROOT,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -81,9 +94,11 @@ export async function POST(request: Request) {
     await updateJob(job.id, { status: "running", pid: child.pid });
 
     child.on("exit", async (code) => {
+      const findings = code === 0 ? await countFindings(tool) : 0;
       await updateJob(job.id, {
         status: code === 0 ? "completed" : "failed",
         progress: 100,
+        findings,
         error: code !== 0 ? `Exited with code ${code}` : undefined,
       });
     });
@@ -104,9 +119,11 @@ export async function POST(request: Request) {
     await updateJob(job.id, { status: "running", pid: child.pid });
 
     child.on("exit", async (code) => {
+      const findings = code === 0 ? await countFindings(tool) : 0;
       await updateJob(job.id, {
         status: code === 0 ? "completed" : "failed",
         progress: 100,
+        findings,
         error: code !== 0 ? `Exited with code ${code}` : undefined,
       });
     });

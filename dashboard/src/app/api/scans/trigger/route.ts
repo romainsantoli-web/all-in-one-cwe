@@ -2,12 +2,28 @@
 import { NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { join } from "path";
+import { readFile } from "fs/promises";
 import { createJob, updateJob } from "@/lib/jobs";
 import { TOOL_META, getToolsForProfile } from "@/lib/tools-data";
+
+async function countAllFindings(tools: string[]): Promise<number> {
+  let total = 0;
+  for (const t of tools) {
+    try {
+      const reportPath = join(PROJECT_ROOT, "reports", t, "scan-latest.json");
+      const raw = await readFile(reportPath, "utf-8");
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) total += data.length;
+      else if (data && Array.isArray(data.findings)) total += data.findings.length;
+    } catch { /* skip */ }
+  }
+  return total;
+}
 
 export const dynamic = "force-dynamic";
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
 
 // Allowed profiles
 const VALID_PROFILES = new Set(["light", "medium", "full"]);
@@ -84,7 +100,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const child = spawn("python3", args, {
+    const child = spawn(PYTHON_BIN, args, {
       cwd: PROJECT_ROOT,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -109,7 +125,8 @@ export async function POST(request: Request) {
 
     child.on("exit", async (code) => {
       if (code === 0) {
-        await updateJob(job.id, { status: "completed", progress: 100 });
+        const findings = await countAllFindings(toolNames);
+        await updateJob(job.id, { status: "completed", progress: 100, findings });
       } else {
         await updateJob(job.id, { status: "failed", error: `Process exited with code ${code}` });
       }

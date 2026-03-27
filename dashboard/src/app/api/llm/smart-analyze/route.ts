@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
 const MAX_STEPS = 5;
 
 function getDefaultProvider(): string | null {
@@ -30,7 +31,7 @@ function runToolSync(tool: string, target: string): Promise<string> {
   return new Promise((resolve) => {
     const scriptName = tool.replace(/-/g, "_") + ".py";
     const scriptPath = join(PROJECT_ROOT, "tools", "python-scanners", scriptName);
-    const child = spawn("python3", [scriptPath, "--target", target], {
+    const child = spawn(PYTHON_BIN, [scriptPath, "--target", target], {
       cwd: PROJECT_ROOT,
       stdio: ["ignore", "pipe", "pipe"],
       env: {

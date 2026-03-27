@@ -330,7 +330,7 @@ def scan(
                 endpoint=url,
                 method="GET",
                 description=f"Dangerous debug headers found: {', '.join(fp['header'] for fp in dangerous_fps)}",
-                steps=[f"GET {url}", f"Headers: {', '.join(f'{fp[\"header\"]}: {fp[\"value\"]}' for fp in dangerous_fps)}"],
+                steps=[f"GET {url}", "Headers: " + ", ".join(f"{fp['header']}: {fp['value']}" for fp in dangerous_fps)],
                 impact="Internal debug information leakage",
                 evidence=dangerous_fps,
                 remediation="Remove all debug headers from production responses.",
