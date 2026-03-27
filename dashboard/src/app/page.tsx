@@ -8,6 +8,7 @@ import CweBarChart from "@/components/CweBarChart";
 import CvssHistogram from "@/components/CvssHistogram";
 import FindingsTable from "@/components/FindingsTable";
 import ExportButton from "@/components/ExportButton";
+import QuickActions from "@/components/QuickActions";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,9 @@ export default async function HomePage() {
         </div>
         <ExportButton findings={findings} />
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">

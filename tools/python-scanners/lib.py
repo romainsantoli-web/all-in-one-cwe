@@ -25,7 +25,9 @@ import requests
 # Constants
 # ---------------------------------------------------------------------------
 
-USER_AGENT = "SecurityAllInOneCWE/1.0 (BugBounty Scanner)"
+_BASE_UA = "SecurityAllInOneCWE/1.0 (BugBounty Scanner)"
+_UA_SUFFIX = os.environ.get("UA_SUFFIX", "")
+USER_AGENT = f"{_BASE_UA} {_UA_SUFFIX}".strip() if _UA_SUFFIX else _BASE_UA
 DEFAULT_RATE_LIMIT = 10.0  # max req/s — conservative default
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/output"))
 

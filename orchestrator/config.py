@@ -101,6 +101,36 @@ PARALLEL_GROUPS: list[dict] = [
         "tools": ["restler"],
         "depends_on": ["recon"],
     },
+    # ── Group 11: WAF evasion (after WAF detection) ───────────────
+    {
+        "name": "waf-evasion",
+        "tools": ["waf-bypass-py", "header-classifier"],
+        "depends_on": ["recon"],
+    },
+    # ── Group 12: Business logic testing ──────────────────────────
+    {
+        "name": "business-logic",
+        "tools": ["coupon-promo-fuzzer", "hateoas-fuzzer", "timing-oracle"],
+        "depends_on": ["dast"],
+    },
+    # ── Group 13: Discovery / information leak ────────────────────
+    {
+        "name": "discovery",
+        "tools": ["source-map-scanner", "hidden-endpoint-scanner", "response-pii-detector"],
+        "depends_on": ["recon"],
+    },
+    # ── Group 14: OAuth / session testing ─────────────────────────
+    {
+        "name": "oauth-session",
+        "tools": ["oauth-flow-scanner"],
+        "depends_on": ["dast"],
+    },
+    # ── Group 15: CDP-based scanners (optional, needs CDP_URL) ────
+    {
+        "name": "cdp-scanners",
+        "tools": ["cdp-token-extractor", "cdp-checkout-interceptor", "cdp-credential-scanner"],
+        "depends_on": ["recon"],
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -177,6 +207,19 @@ TOOL_META: dict[str, dict] = {
     "smuggler":             {"profile": "web-advanced",     "requires": "target"},
     "checkov":              {"profile": "iac",              "requires": "code"},
     "restler":              {"profile": "api-fuzzing",      "requires": None, "file_requires": "configs/openapi.yaml"},
+    # New generic scanner tools (extracted from LVMH pentesting, made generic)
+    "waf-bypass-py":        {"profile": "python-scanners",  "requires": "target"},
+    "source-map-scanner":   {"profile": "python-scanners",  "requires": "target"},
+    "hidden-endpoint-scanner": {"profile": "python-scanners", "requires": "target"},
+    "hateoas-fuzzer":       {"profile": "python-scanners",  "requires": "target"},
+    "coupon-promo-fuzzer":  {"profile": "python-scanners",  "requires": "target"},
+    "response-pii-detector": {"profile": "python-scanners", "requires": "target"},
+    "header-classifier":    {"profile": "python-scanners",  "requires": "target"},
+    "timing-oracle":        {"profile": "python-scanners",  "requires": "target"},
+    "oauth-flow-scanner":   {"profile": "python-scanners",  "requires": "target"},
+    "cdp-token-extractor":  {"profile": "python-scanners",  "requires": "target", "env_requires": ["CDP_URL"]},
+    "cdp-checkout-interceptor": {"profile": "python-scanners", "requires": "target", "env_requires": ["CDP_URL"]},
+    "cdp-credential-scanner": {"profile": "python-scanners", "requires": "target", "env_requires": ["CDP_URL"]},
 }
 
 # CWE → downstream tool routing (conditional triggers)
@@ -188,6 +231,15 @@ CWE_TRIGGERS: dict[str, list[str]] = {
     "CWE-524": ["cache-deception"],   # Cache issues → cache deception test
     "CWE-400": ["slowloris-check"],   # Resource issues → slowloris detection
     "CWE-284": ["websocket-scanner"], # Access control → websocket auth check
+    "CWE-178": ["waf-bypass-py"],     # WAF bypass → path confusion test
+    "CWE-200": ["response-pii-detector", "header-classifier"],  # Info leak → PII + header scan
+    "CWE-215": ["source-map-scanner", "hidden-endpoint-scanner"],  # Info exposure → source maps + debug endpoints
+    "CWE-639": ["hateoas-fuzzer", "coupon-promo-fuzzer"],  # IDOR / business logic
+    "CWE-601": ["oauth-flow-scanner"],  # Open redirect → OAuth flow scan
+    "CWE-798": ["cdp-credential-scanner"],  # Hardcoded creds → JS bundle scan
+    "CWE-208": ["timing-oracle"],     # Timing info leak → differential analysis
+    "CWE-347": ["cdp-token-extractor"],  # JWT issues → live token capture
+    "CWE-915": ["cdp-checkout-interceptor"],  # Mass assignment → checkout mutation
 }
 
 # Tools that produce endpoints for downstream injection

@@ -2,7 +2,7 @@
 export interface Finding {
   id: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low" | "info";
+  severity: string;
   cwe?: string;
   cwe_id?: string;
   tool: string;
@@ -36,6 +36,7 @@ export const SEVERITY_COLORS: Record<string, string> = {
   medium: "#eab308",
   low: "#22c55e",
   info: "#3b82f6",
+  unknown: "#6b7280",
 };
 
-export const SEVERITY_ORDER = ["critical", "high", "medium", "low", "info"];
+export const SEVERITY_ORDER = ["critical", "high", "medium", "low", "info", "unknown"];

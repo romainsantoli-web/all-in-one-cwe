@@ -1,9 +1,10 @@
 // ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import type { Finding } from "@/lib/types";
 import SeverityBadge from "./SeverityBadge";
+import AskAIButton from "./AskAIButton";
 import { SEVERITY_ORDER } from "@/lib/types";
 
 export default function FindingsTable({ findings }: { findings: Finding[] }) {
@@ -144,9 +145,8 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
               const key = f.id || `${f.tool}-${i}`;
               const isExpanded = expandedId === key;
               return (
-                <>
+                <Fragment key={key}>
                   <tr
-                    key={key}
                     className="border-b border-[var(--border)] hover:bg-[var(--bg)] cursor-pointer"
                     onClick={() => setExpandedId(isExpanded ? null : key)}
                   >
@@ -226,11 +226,12 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
                               </span>
                             )}
                           </div>
+                          <AskAIButton finding={f} />
                         </div>
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
             {filtered.length === 0 && (

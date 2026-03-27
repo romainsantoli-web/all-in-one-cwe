@@ -48,6 +48,89 @@ const NAV_ITEMS = [
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
     ),
+    section: "end",
+  },
+  {
+    href: "/launch",
+    label: "Launch",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="5 3 19 12 5 21 5 3" />
+      </svg>
+    ),
+  },
+  {
+    href: "/ai",
+    label: "AI Chat",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/tools",
+    label: "Tools",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/graph",
+    label: "Graph",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+      </svg>
+    ),
+  },
+  {
+    href: "/llm",
+    label: "LLM",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+        <path d="M16 14a4 4 0 0 0-8 0v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4z" />
+        <line x1="12" y1="8" x2="12" y2="14" />
+      </svg>
+    ),
+  },
+  {
+    href: "/memory",
+    label: "Memory",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="6" width="20" height="12" rx="2" />
+        <path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01" />
+        <path d="M6 6V4M10 6V4M14 6V4M18 6V4M6 18v2M10 18v2M14 18v2M18 18v2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/scope",
+    label: "Scope",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="6" />
+        <circle cx="12" cy="12" r="2" />
+      </svg>
+    ),
+  },
+  {
+    href: "/smart",
+    label: "Smart Scan",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </svg>
+    ),
   },
 ];
 
@@ -74,21 +157,31 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`sidebar-link ${isActive(item.href) ? "active" : ""}`}
-          >
-            {item.icon}
-            {item.label}
-          </Link>
-        ))}
+        {NAV_ITEMS.map((item, i) => {
+          const prevItem = NAV_ITEMS[i - 1];
+          const showSeparator = i === 6; // Separator before "Tools" section
+          return (
+            <div key={item.href}>
+              {showSeparator && (
+                <div className="my-2 mx-3 border-t border-[var(--border)]">
+                  <span className="block text-[10px] text-[var(--text-dim)] mt-2 mb-1 px-1 uppercase tracking-wider">Intelligence</span>
+                </div>
+              )}
+              <Link
+                href={item.href}
+                className={`sidebar-link ${isActive(item.href) ? "active" : ""}`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            </div>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">
         <div>All-in-One CWE v1.0</div>
-        <div className="mt-1">67 tools · 76 services</div>
+        <div className="mt-1">79 tools · 76 services</div>
       </div>
     </aside>
   );
