@@ -1,0 +1,82 @@
+# Louis Vuitton Bug Bounty Scope — YesWeHack
+# WARNING: Respect program rules. No automated heavy traffic. Append lvm-ywh-pbb to User-Agent.
+
+name: "Louis Vuitton Malletier — YesWeHack Bug Bounty"
+
+targets:
+  - url: "https://fr.louisvuitton.com"
+    type: web
+    asset_value: critical
+  - url: "https://api.louisvuitton.com"
+    type: api
+    asset_value: critical
+
+# Rate limiting — MANDATORY per program rules
+rate_limit: 10  # Conservative: no automated scanners generating large traffic
+user_agent_suffix: " lvm-ywh-pbb "
+
+out_of_scope:
+  - "*.louisvuitton.com"  # except targets above and *.api.louisvuitton.com
+  - "account.louisvuitton.com"
+  - "jobs.louisvuitton.com"
+  - "secure.louisvuitton.cn"
+  - "*.louisvuitton.cn"
+  - "Third-party: narvar, ixopay, cardinal commerce, algolia, akamai"
+  - "Social engineering"
+  - "DoS/DDoS"
+  - "*.jsp pages (XSS/redirect/CSRF/HTMLi excluded on JSP)"
+
+qualifying_vulns:
+  - "SQL Injection (SQLi)"
+  - "Cross-Site Scripting (XSS) — except on *.jsp"
+  - "Remote Code Execution (RCE)"
+  - "IDOR / Broken Access Control"
+  - "Privilege Escalation"
+  - "Authentication Bypass"
+  - "Business Logic Errors with security impact"
+  - "LFI, RFI, XXE, SSRF, XSPA"
+  - "CORS with real security impact"
+  - "CSRF with real security impact"
+  - "Open Redirect — except on *.jsp"
+  - "Exposed secrets/credentials on in-scope assets"
+
+non_qualifying_vulns:
+  - "Broken links"
+  - "Missing cookie flags"
+  - "Content injection / text injection"
+  - "Clickjacking"
+  - "DoS"
+  - "Self-XSS"
+  - "SSL/TLS issues"
+  - "Missing HTTP headers without exploit"
+  - "Low-severity CSRF (logout, cart)"
+  - "SPF/DKIM/DMARC"
+  - "Session management issues"
+  - "Information disclosure without exploit PoC"
+  - "CSV injection"
+  - "Rate limiting / brute force"
+  - "User enumeration"
+  - "Weak password policies"
+  - "Disclosed public API keys (Google Maps, Firebase, analytics)"
+  - "GraphQL introspection"
+  - "Subdomain takeover without full PoC"
+  - "Blind SSRF without exploit PoC"
+  - "XSS/redirect/CSRF/HTMLi on *.jsp"
+
+rules:
+  max_requests_per_second: 10
+  no_data_destruction: true
+  no_data_exfiltration: true
+  no_account_modification: true
+  redact_pii: true
+  user_agent_tag: " lvm-ywh-pbb "
+
+# Known SFCC/EAPI endpoints discovered (in-scope under api.louisvuitton.com)
+known_endpoints:
+  - "api.louisvuitton.com/eco-eu/lvcom-tkn-handlr-eapi/v1/"
+  - "api.louisvuitton.com/eco-eu/lvcom-client-eapi/v1/"
+  - "api.louisvuitton.com/eco-eu/lvcom-prodct-dtl-eapi/v2/"
+  - "api.louisvuitton.com/eco-eu/search-merch-eapi/v1/"
+  - "api.louisvuitton.com/eco-eu/lvcom-basket-eapi/v1/"
+  - "api.louisvuitton.com/eco-eu/lvcom-checkout-eapi/v1/"
+  - "api.louisvuitton.com/dts-eu/asset-pub-dam/v1/"

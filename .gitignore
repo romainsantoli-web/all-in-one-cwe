@@ -41,3 +41,5 @@ Thumbs.db
 *.crt
 token.txt
 .cache/
+reports/.jobs/
+reports/.settings/

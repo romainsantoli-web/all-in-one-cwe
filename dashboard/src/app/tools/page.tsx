@@ -105,6 +105,7 @@ function ToolCard({ tool, inLight, inMedium, onRun }: { tool: ToolMeta; inLight:
 export default function ToolsPage() {
   const [runningTool, setRunningTool] = useState<string | null>(null);
   const [cdpStatus, setCdpStatus] = useState<CdpStatus | null>(null);
+  const [cdpLaunching, setCdpLaunching] = useState(false);
   const tools = getAllTools();
   const lightSet = new Set(LIGHT_TOOLS);
   const mediumSet = new Set(MEDIUM_TOOLS);
@@ -115,6 +116,31 @@ export default function ToolsPage() {
       .then((data: CdpStatus) => setCdpStatus(data))
       .catch(() => setCdpStatus({ available: false, url: "ws://localhost:9222" }));
   }, []);
+
+  const refreshCdpStatus = () => {
+    fetch("/api/cdp/status")
+      .then((r) => r.json())
+      .then((data: CdpStatus) => setCdpStatus(data))
+      .catch(() => {});
+  };
+
+  const launchCdp = async () => {
+    setCdpLaunching(true);
+    try {
+      const res = await fetch("/api/cdp/launch", { method: "POST" });
+      await res.json();
+      // Refresh status after launch
+      setTimeout(refreshCdpStatus, 2000);
+    } catch { /* ignore */ }
+    finally { setCdpLaunching(false); }
+  };
+
+  const stopCdp = async () => {
+    try {
+      await fetch("/api/cdp/launch", { method: "DELETE" });
+      setTimeout(refreshCdpStatus, 1000);
+    } catch { /* ignore */ }
+  };
 
   // Group tools by parallel group
   const grouped: Record<string, ToolMeta[]> = {};
@@ -209,19 +235,36 @@ export default function ToolsPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {cdpStatus?.available ? (
+              <button
+                onClick={stopCdp}
+                className="px-3 py-1.5 text-xs bg-red-900/20 text-red-400 rounded font-medium hover:bg-red-900/30 transition-colors"
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                onClick={launchCdp}
+                disabled={cdpLaunching}
+                className="px-3 py-1.5 text-xs bg-[var(--accent)]/20 text-[var(--accent)] rounded font-medium hover:bg-[var(--accent)]/30 transition-colors disabled:opacity-50"
+              >
+                {cdpLaunching ? "Launching..." : "▶ Launch Chrome"}
+              </button>
+            )}
+            <button
+              onClick={refreshCdpStatus}
+              className="px-2 py-1.5 text-xs text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
+              title="Refresh status"
+            >
+              ↻
+            </button>
             <span className={`inline-block w-2.5 h-2.5 rounded-full ${cdpStatus?.available ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
             <span className={`text-xs font-medium ${cdpStatus?.available ? "text-green-400" : "text-red-400"}`}>
               {cdpStatus === null ? "Checking..." : cdpStatus.available ? "Connected" : "Not available"}
             </span>
           </div>
         </div>
-        {cdpStatus && !cdpStatus.available && cdpStatus.launchHint && (
-          <div className="mt-3 p-2 bg-[var(--bg)] rounded">
-            <p className="text-xs text-[var(--text-muted)] mb-1">Launch Chrome headless to enable CDP tools:</p>
-            <code className="text-xs text-[var(--accent)] font-mono break-all">{cdpStatus.launchHint}</code>
-          </div>
-        )}
         {cdpStatus?.available && (
           <p className="mt-2 text-xs text-green-300/70">Connected to {cdpStatus.url}</p>
         )}

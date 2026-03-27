@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { join } from "path";
 import { readFile } from "fs/promises";
+import { createWriteStream } from "fs";
 import { createJob, updateJob } from "@/lib/jobs";
 import { TOOL_META } from "@/lib/tools-data";
 
@@ -93,6 +94,12 @@ export async function POST(request: Request) {
     child.unref();
     await updateJob(job.id, { status: "running", pid: child.pid });
 
+    // Capture output to log file for terminal view
+    const logFile = join(PROJECT_ROOT, "reports", ".jobs", `${job.id}.log`);
+    const logStream = createWriteStream(logFile, { flags: "a" });
+    child.stdout?.pipe(logStream);
+    child.stderr?.pipe(logStream);
+
     child.on("exit", async (code) => {
       const findings = code === 0 ? await countFindings(tool) : 0;
       await updateJob(job.id, {
@@ -117,6 +124,12 @@ export async function POST(request: Request) {
 
     child.unref();
     await updateJob(job.id, { status: "running", pid: child.pid });
+
+    // Capture output to log file for terminal view
+    const logFile = join(PROJECT_ROOT, "reports", ".jobs", `${job.id}.log`);
+    const logStream2 = createWriteStream(logFile, { flags: "a" });
+    child.stdout?.pipe(logStream2);
+    child.stderr?.pipe(logStream2);
 
     child.on("exit", async (code) => {
       const findings = code === 0 ? await countFindings(tool) : 0;

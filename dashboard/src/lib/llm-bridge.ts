@@ -6,6 +6,7 @@
 
 import { spawn } from "child_process";
 import { join } from "path";
+import { getEnvWithSettings } from "@/lib/settings";
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 
@@ -24,7 +25,7 @@ export function callLLM(req: LLMRequest): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
   return new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const script = join(PROJECT_ROOT, "llm", "cli.py");
       const input = JSON.stringify({
         provider: req.provider,
@@ -33,9 +34,11 @@ export function callLLM(req: LLMRequest): ReadableStream<Uint8Array> {
         max_tokens: req.maxTokens ?? 4096,
       });
 
+      const env = await getEnvWithSettings();
+
       const child = spawn("python3", [script], {
         cwd: PROJECT_ROOT,
-        env: process.env,
+        env,
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -85,6 +88,7 @@ export function callLLM(req: LLMRequest): ReadableStream<Uint8Array> {
  * Non-streaming LLM call — collects full response.
  */
 export async function callLLMSync(req: LLMRequest): Promise<string> {
+  const env = await getEnvWithSettings();
   return new Promise((resolve, reject) => {
     const script = join(PROJECT_ROOT, "llm", "cli.py");
     const input = JSON.stringify({
@@ -96,7 +100,7 @@ export async function callLLMSync(req: LLMRequest): Promise<string> {
 
     const child = spawn("python3", [script, "--sync"], {
       cwd: PROJECT_ROOT,
-      env: process.env,
+      env,
       stdio: ["pipe", "pipe", "pipe"],
     });
 
