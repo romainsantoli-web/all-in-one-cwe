@@ -115,6 +115,73 @@ export async function cancelJob(id: string): Promise<{ ok: boolean }> {
   });
 }
 
+export async function deleteJob(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/scans/jobs/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export interface JobSummaryResult {
+  tool: string;
+  status: string;
+  elapsed_s?: number;
+  findings?: number;
+  reason?: string;
+}
+
+export interface JobSummary {
+  job_id: string;
+  target: string;
+  profile: string;
+  tools_run: number;
+  completed: number;
+  failed: number;
+  total_findings: number;
+  results: JobSummaryResult[];
+}
+
+export async function getJobSummary(id: string): Promise<JobSummary | null> {
+  try {
+    return await apiFetch<JobSummary>(`/api/scans/jobs/${encodeURIComponent(id)}/summary`);
+  } catch {
+    return null;
+  }
+}
+
+export async function getJobLog(id: string): Promise<string> {
+  const res = await fetch(`/api/scans/jobs/${encodeURIComponent(id)}/log`);
+  if (!res.ok) return "";
+  return res.text();
+}
+
+export interface ToolFinding {
+  tool: string;
+  id: string;
+  name: string;
+  severity: string;
+  cwe: string;
+  url?: string;
+  description: string;
+  remediation?: string;
+  impact?: string;
+  evidence?: Record<string, unknown>;
+  steps?: string[];
+}
+
+export interface ToolFindingsResponse {
+  tool: string;
+  count: number;
+  findings: ToolFinding[];
+}
+
+export async function getToolFindings(toolName: string): Promise<ToolFindingsResponse> {
+  try {
+    return await apiFetch<ToolFindingsResponse>(`/api/scans/tools/${encodeURIComponent(toolName)}/findings`);
+  } catch {
+    return { tool: toolName, count: 0, findings: [] };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tools API
 // ---------------------------------------------------------------------------
@@ -314,4 +381,28 @@ export function streamJobProgress(jobId: string, onEvent: (data: JobStatus) => v
     es.close();
   };
   return () => es.close();
+}
+
+// ---------------------------------------------------------------------------
+// Scan report management
+// ---------------------------------------------------------------------------
+
+export async function deleteScanReport(filename: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/api/scans/${encodeURIComponent(filename)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function renameScanReport(
+  filename: string,
+  newName: string
+): Promise<{ ok: boolean; newName: string }> {
+  return apiFetch<{ ok: boolean; newName: string }>(
+    `/api/scans/${encodeURIComponent(filename)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newName }),
+    }
+  );
 }

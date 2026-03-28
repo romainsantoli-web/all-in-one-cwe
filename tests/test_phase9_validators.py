@@ -37,11 +37,10 @@ try:
         is_always_rejected,
     )
     test("T1: validators module imports", True)
+    _IMPORTS_OK = True
 except ImportError as e:
     test("T1: validators module imports", False, str(e))
-    # Can't continue without imports
-    print(f"\nPhase 9 Tests: {passed} passed, {failed} failed")
-    sys.exit(1)
+    _IMPORTS_OK = False
 
 
 # ── GateResult tests ─────────────────────────────────
@@ -305,4 +304,5 @@ if errors:
         print(f"  ✗ {e}")
 print(f"{'='*50}")
 
-sys.exit(1 if failed else 0)
+if __name__ == "__main__":
+    sys.exit(1 if failed else 0)

@@ -1,8 +1,7 @@
 // ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 import { listScans, loadScan } from "@/lib/data";
-import Link from "next/link";
-import SeverityBadge from "@/components/SeverityBadge";
-import { SEVERITY_ORDER } from "@/lib/types";
+import ScansList from "@/components/ScansList";
+import type { ScanItem } from "@/components/ScansList";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +25,11 @@ export default async function ScansPage() {
         profile: report.profile,
         tool_count: report.tool_count,
         severityCounts,
-      };
+      } satisfies ScanItem;
     })
   );
 
-  const validScans = scans.filter(Boolean);
+  const validScans: ScanItem[] = scans.filter((s) => s !== null);
 
   return (
     <main className="px-6 py-6">
@@ -43,56 +42,7 @@ export default async function ScansPage() {
         </div>
       </div>
 
-      {validScans.length === 0 ? (
-        <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-8 text-center">
-          <p className="text-[var(--text-muted)]">
-            No scan reports found. Run a scan first.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {validScans.map((scan) => (
-            <Link
-              key={scan!.filename}
-              href={`/scans/${encodeURIComponent(scan!.filename)}`}
-              className="block bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--border-hover)] transition-all"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold">{scan!.target}</span>
-                  {scan!.profile && (
-                    <span className="text-xs px-2 py-0.5 bg-[var(--accent)]20 text-[var(--accent)] rounded font-medium">
-                      {scan!.profile}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs text-[var(--text-muted)]">{scan!.date}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  {SEVERITY_ORDER.map(
-                    (sev) =>
-                      (scan!.severityCounts[sev] || 0) > 0 && (
-                        <span key={sev} className="flex items-center gap-1">
-                          <SeverityBadge severity={sev} />
-                          <span className="text-xs font-mono">
-                            {scan!.severityCounts[sev]}
-                          </span>
-                        </span>
-                      )
-                  )}
-                </div>
-                <span className="text-xs text-[var(--text-dim)]">
-                  {scan!.total} findings
-                  {scan!.tool_count ? ` · ${scan!.tool_count} tools` : ""}
-                  {" · "}
-                  {scan!.filename}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+      <ScansList initialScans={validScans} />
     </main>
   );
 }

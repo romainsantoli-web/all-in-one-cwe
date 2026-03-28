@@ -2,9 +2,13 @@
 import { NextResponse } from "next/server";
 import { callLLM } from "@/lib/llm-bridge";
 import { LLM_PROVIDERS } from "@/lib/tools-data";
+import { listJobs } from "@/lib/jobs";
+import { readFile, stat } from "fs/promises";
+import { join } from "path";
 
 export const dynamic = "force-dynamic";
 
+const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 const PROVIDER_NAMES = new Set(LLM_PROVIDERS.map((p) => p.name));
 const MAX_MESSAGES = 50;
 const MAX_CONTENT_LEN = 10000;
@@ -52,12 +56,42 @@ export async function POST(request: Request) {
 
   // Build messages with system prompt
   const context = typeof body.context === "string" ? body.context.slice(0, 5000) : "";
+  const includeTerminals = body.includeTerminals !== false; // default: true
+
+  // Gather running terminal context
+  let terminalCtx = "";
+  if (includeTerminals) {
+    try {
+      const jobs = await listJobs();
+      const running = jobs.filter((j) => j.status === "running").slice(0, 3);
+      if (running.length > 0) {
+        const parts: string[] = [];
+        for (const job of running) {
+          const safeId = job.id.replace(/[^a-zA-Z0-9_-]/g, "");
+          const logPath = join(PROJECT_ROOT, "reports", ".jobs", `${safeId}.log`);
+          let logTail = "";
+          try {
+            const st = await stat(logPath);
+            if (st.size > 0) {
+              const raw = await readFile(logPath, "utf-8");
+              logTail = raw.length > 1000 ? raw.slice(-1000) : raw;
+            }
+          } catch { /* noop */ }
+          parts.push(`[Terminal ${safeId.slice(0, 8)}] tool=${job.tool || "scan"} status=${job.status}\n${logTail || "(no output yet)"}`);
+        }
+        terminalCtx = parts.join("\n---\n");
+      }
+    } catch { /* noop */ }
+  }
+
   const systemPrompt = [
     "You are a senior security researcher and bug bounty expert.",
     "Help the user analyze vulnerabilities, plan testing strategies, and write remediation reports.",
+    "You have access to live terminal output from running scans. Use this context to provide informed analysis.",
     "Use markdown formatting. Be precise and actionable.",
     context ? `\n## Additional Context\n${context}` : "",
-  ].join(" ");
+    terminalCtx ? `\n## Live Terminal Output\n${terminalCtx}` : "",
+  ].filter(Boolean).join(" ");
 
   const messages = [
     { role: "system", content: systemPrompt },

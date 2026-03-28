@@ -17,11 +17,12 @@ export default function ComparePage() {
   useEffect(() => {
     fetch("/api/scans")
       .then((r) => r.json())
-      .then((data: string[]) => {
-        setFiles(data);
-        if (data.length >= 2) {
-          setScanA(data[0]);
-          setScanB(data[1]);
+      .then((data: Array<string | { filename: string }>) => {
+        const names = data.map((d) => (typeof d === "string" ? d : d.filename));
+        setFiles(names);
+        if (names.length >= 2) {
+          setScanA(names[0]);
+          setScanB(names[1]);
         }
       })
       .catch(() => setFiles([]));

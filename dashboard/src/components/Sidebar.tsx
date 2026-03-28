@@ -134,10 +134,14 @@ const NAV_ITEMS = [
     ),
   },
   {
-    href: "/smart",
-    label: "Smart Scan",
+    href: "/autopilot",
+    label: "Autopilot",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+        <path d="M8 12h8" />
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
       </svg>
     ),

@@ -63,7 +63,7 @@ export default async function ScanDetailPage({
             {uniqueTools > 0 && <span> · {uniqueTools} tools</span>}
           </p>
         </div>
-        <ExportButton findings={findings} />
+        <ExportButton findings={findings} reportFilename={filename} />
       </div>
 
       {/* KPI row */}

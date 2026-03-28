@@ -174,12 +174,74 @@ export default function ScanLauncher() {
             </span>
           </div>
 
-          <div className="w-full bg-[var(--bg)] rounded-full h-3 mb-3">
-            <div
-              className="h-3 rounded-full bg-[var(--accent)] transition-all duration-500"
-              style={{ width: `${job.progress}%` }}
-            />
+          {/* Animated progress bar */}
+          <div className="w-full bg-[var(--bg)] rounded-full h-4 mb-3 overflow-hidden relative">
+            {job.status === "running" ? (
+              <>
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out relative"
+                  style={{
+                    width: `${Math.max(job.progress, 5)}%`,
+                    background: "linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)",
+                  }}
+                >
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.1) 8px, rgba(255,255,255,0.1) 16px)",
+                      animation: "progress-stripes 0.8s linear infinite",
+                    }}
+                  />
+                </div>
+                <div
+                  className="absolute top-0 right-0 h-full w-16 rounded-full"
+                  style={{
+                    background: "linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4))",
+                    filter: "blur(6px)",
+                    animation: "pulse-glow 1.5s ease-in-out infinite",
+                  }}
+                />
+              </>
+            ) : job.status === "completed" ? (
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: "100%",
+                  background: "linear-gradient(90deg, #22c55e, #10b981)",
+                  boxShadow: "0 0 12px rgba(34, 197, 94, 0.4)",
+                }}
+              />
+            ) : job.status === "failed" ? (
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.max(job.progress, 15)}%`,
+                  background: "linear-gradient(90deg, #ef4444, #dc2626)",
+                }}
+              />
+            ) : (
+              <div
+                className="h-full rounded-full bg-yellow-500/60 transition-all duration-500"
+                style={{ width: `${Math.max(job.progress, 3)}%` }}
+              />
+            )}
+            {/* Percentage label */}
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow-sm">
+              {job.progress}%
+            </span>
           </div>
+
+          <style jsx>{`
+            @keyframes progress-stripes {
+              0% { background-position: 0 0; }
+              100% { background-position: 32px 0; }
+            }
+            @keyframes pulse-glow {
+              0%, 100% { opacity: 0.4; }
+              50% { opacity: 1; }
+            }
+          `}</style>
 
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
@@ -208,6 +270,14 @@ export default function ScanLauncher() {
               >
                 Cancel
               </button>
+            )}
+            {job.status === "completed" && jobId && (
+              <a
+                href={`/launch/${jobId}`}
+                className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors inline-flex items-center gap-1.5"
+              >
+                📊 View Report
+              </a>
             )}
             {["completed", "failed", "cancelled"].includes(job.status) && (
               <button

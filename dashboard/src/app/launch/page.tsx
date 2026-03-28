@@ -4,6 +4,7 @@
 import ScanLauncher from "@/components/ScanLauncher";
 import { useState, useEffect } from "react";
 import { listJobs, type JobStatus } from "@/lib/api-client";
+import Link from "next/link";
 
 export default function LaunchPage() {
   const [recentJobs, setRecentJobs] = useState<JobStatus[]>([]);
@@ -53,12 +54,13 @@ export default function LaunchPage() {
             ) : (
               <div className="space-y-2">
                 {recentJobs.map((job) => (
-                  <div
+                  <Link
                     key={job.id}
-                    className="flex items-center justify-between py-2 px-3 rounded bg-[var(--bg)] text-xs"
+                    href={`/launch/${job.id}`}
+                    className="flex items-center justify-between py-2 px-3 rounded bg-[var(--bg)] text-xs hover:bg-[var(--bg)]/80 transition-colors group"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono truncate">{job.tool || job.tools.length + " tools"}</div>
+                      <div className="font-mono truncate group-hover:text-[var(--accent)] transition-colors">{job.tool || job.tools.length + " tools"}</div>
                       <div className="text-[var(--text-dim)] truncate">{job.target}</div>
                     </div>
                     <div className="flex items-center gap-2 ml-2 shrink-0">
@@ -68,8 +70,9 @@ export default function LaunchPage() {
                       <span className={`font-medium ${statusColor(job.status)}`}>
                         {job.status}
                       </span>
+                      <span className="text-[var(--text-dim)] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

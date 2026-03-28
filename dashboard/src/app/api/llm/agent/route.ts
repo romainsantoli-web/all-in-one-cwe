@@ -2,6 +2,8 @@
 import { NextResponse } from "next/server";
 import { callLLMSync } from "@/lib/llm-bridge";
 import { TOOL_META, LLM_PROVIDERS } from "@/lib/tools-data";
+import { listJobs } from "@/lib/jobs";
+import { readFile, stat } from "fs/promises";
 import { spawn } from "child_process";
 import { join } from "path";
 
@@ -37,6 +39,37 @@ function buildToolDefs(): string {
     .map(([name]) => `- ${name}`)
     .join("\n");
   return pythonTools;
+}
+
+/** Read recent terminal logs to inject as context for the LLM. */
+async function getTerminalContext(): Promise<string> {
+  try {
+    const jobs = await listJobs();
+    const recent = jobs.slice(0, 5);
+    if (recent.length === 0) return "";
+
+    const parts: string[] = [];
+    for (const job of recent) {
+      const safeId = job.id.replace(/[^a-zA-Z0-9_-]/g, "");
+      const logPath = join(PROJECT_ROOT, "reports", ".jobs", `${safeId}.log`);
+      let logTail = "";
+      try {
+        const st = await stat(logPath);
+        if (st.size > 0) {
+          const raw = await readFile(logPath, "utf-8");
+          logTail = raw.length > 1500 ? raw.slice(-1500) : raw;
+        }
+      } catch { /* no log file */ }
+
+      parts.push(
+        `[Terminal ${safeId.slice(0, 8)}] tool=${job.tool || "scan"} status=${job.status} target=${job.target}` +
+        (logTail ? `\n${logTail}` : " (no output)")
+      );
+    }
+    return parts.join("\n---\n");
+  } catch {
+    return "";
+  }
 }
 
 /** Run a single Python scanner tool synchronously. Returns findings JSON or error. */
@@ -77,12 +110,119 @@ function runToolSync(tool: string, target: string): Promise<string> {
   });
 }
 
+const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
+const VALID_MODES = new Set(["paranoid", "normal", "yolo"]);
+const VALID_PROFILES = new Set(["light", "medium", "full"]);
+const MAX_AUTOPILOT_STEPS = 200;
+const MAX_AUTOPILOT_TIME = 7200;
+
+/** Handle autopilot mode — spawns react_engine.py and streams JSONL as SSE. */
+function handleAutopilot(body: Record<string, unknown>): Response {
+  const target = body.target;
+  if (typeof target !== "string" || !isValidTarget(target)) {
+    return NextResponse.json({ error: "target: valid http/https URL required" }, { status: 400 });
+  }
+  if (target.length > MAX_TARGET_LEN) {
+    return NextResponse.json({ error: "target: too long" }, { status: 400 });
+  }
+
+  const checkpointMode = typeof body.checkpointMode === "string" && VALID_MODES.has(body.checkpointMode)
+    ? body.checkpointMode : "normal";
+  const profile = typeof body.profile === "string" && VALID_PROFILES.has(body.profile)
+    ? body.profile : "medium";
+  const maxSteps = typeof body.maxSteps === "number"
+    ? Math.min(Math.max(Math.floor(body.maxSteps), 5), MAX_AUTOPILOT_STEPS) : 50;
+  const maxTime = typeof body.maxTime === "number"
+    ? Math.min(Math.max(Math.floor(body.maxTime), 60), MAX_AUTOPILOT_TIME) : 3600;
+
+  const encoder = new TextEncoder();
+  const scriptPath = join(PROJECT_ROOT, "scripts", "react_engine.py");
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const emit = (data: unknown) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      const child = spawn(PYTHON_BIN, [
+        scriptPath,
+        "--target", target,
+        "--mode", checkpointMode,
+        "--max-steps", String(maxSteps),
+        "--max-time", String(maxTime),
+        "--profile", profile,
+      ], {
+        cwd: PROJECT_ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
+      });
+
+      let buffer = "";
+      child.stdout?.on("data", (chunk: Buffer) => {
+        buffer += chunk.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            emit(parsed);
+          } catch {
+            emit({ event: "log", message: line.slice(0, 1000) });
+          }
+        }
+      });
+
+      child.stderr?.on("data", (chunk: Buffer) => {
+        const msg = chunk.toString().slice(0, 500);
+        emit({ event: "log", level: "stderr", message: msg });
+      });
+
+      const timeout = setTimeout(() => {
+        child.kill("SIGTERM");
+      }, (maxTime + 30) * 1000);
+
+      child.on("exit", (code) => {
+        clearTimeout(timeout);
+        if (buffer.trim()) {
+          try {
+            emit(JSON.parse(buffer));
+          } catch { /* skip */ }
+        }
+        emit({ event: "exit", code });
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      });
+
+      child.on("error", (err) => {
+        clearTimeout(timeout);
+        emit({ event: "error", message: err.message });
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = await request.json() as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Autopilot mode — delegate to react_engine.py
+  if (body.mode === "autopilot") {
+    return handleAutopilot(body);
   }
 
   const goal = body.goal;
@@ -126,6 +266,9 @@ export async function POST(request: Request) {
       try {
         emit("start", { goal, target, provider, maxSteps });
 
+        // Gather terminal context for the LLM
+        const terminalCtx = await getTerminalContext();
+
         const conversationHistory: Array<{ role: string; content: string }> = [];
 
         const systemPrompt = [
@@ -136,13 +279,16 @@ export async function POST(request: Request) {
           toolDefs,
           "\n\nYou MUST respond in JSON with this structure:",
           '{"action":"run_tool","tool":"tool-name","reason":"why"} — to run a tool',
+          '{"action":"read_terminal","jobId":"id"} — to read a terminal\'s latest output',
           '{"action":"done","summary":"final analysis"} — when you are done',
           "\n\nRules:",
           "- Pick the most relevant tool for the current step.",
+          "- You can read terminal output from running or recent scans with read_terminal.",
           "- After seeing a tool's results, decide if another tool is needed or if you're done.",
           "- Always end with 'done' action and a comprehensive summary.",
           `- You have a maximum of ${maxSteps} steps.`,
-        ].join("\n");
+          terminalCtx ? `\n\n## Recent Terminal Output\n${terminalCtx}` : "",
+        ].filter(Boolean).join("\n");
 
         for (let step = 0; step < maxSteps; step++) {
           emit("step", { step: step + 1, maxSteps });
@@ -187,6 +333,22 @@ export async function POST(request: Request) {
           if (decision.action === "done") {
             emit("done", { summary: decision.summary || "Agent completed." });
             break;
+          }
+
+          if (decision.action === "read_terminal" && typeof (decision as Record<string, unknown>).jobId === "string") {
+            const reqJobId = ((decision as Record<string, unknown>).jobId as string).replace(/[^a-zA-Z0-9_-]/g, "");
+            emit("terminal_read", { jobId: reqJobId });
+            const logPath = join(PROJECT_ROOT, "reports", ".jobs", `${reqJobId}.log`);
+            let logContent = "No log available.";
+            try {
+              const raw = await readFile(logPath, "utf-8");
+              logContent = raw.length > 4000 ? raw.slice(-4000) : raw;
+            } catch { /* no log */ }
+            conversationHistory.push({
+              role: "user",
+              content: `Terminal ${reqJobId} output:\n${logContent}\n\nAnalyze this output. Run another tool or finish with "done".`,
+            });
+            continue;
           }
 
           if (decision.action === "run_tool" && decision.tool) {

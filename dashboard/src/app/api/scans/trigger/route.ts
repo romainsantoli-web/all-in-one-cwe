@@ -6,11 +6,15 @@ import { readFile } from "fs/promises";
 import { createJob, updateJob } from "@/lib/jobs";
 import { TOOL_META, getToolsForProfile } from "@/lib/tools-data";
 
+function getProjectRoot(): string {
+  return process.env.PROJECT_ROOT || "/data";
+}
+
 async function countAllFindings(tools: string[]): Promise<number> {
   let total = 0;
   for (const t of tools) {
     try {
-      const reportPath = join(PROJECT_ROOT, "reports", t, "scan-latest.json");
+      const reportPath = join(getProjectRoot(), "reports", t, "scan-latest.json");
       const raw = await readFile(reportPath, "utf-8");
       const data = JSON.parse(raw);
       if (Array.isArray(data)) total += data.length;
@@ -22,7 +26,6 @@ async function countAllFindings(tools: string[]): Promise<number> {
 
 export const dynamic = "force-dynamic";
 
-const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
 
 // Allowed profiles
@@ -86,7 +89,7 @@ export async function POST(request: Request) {
   });
 
   // Spawn the runner process asynchronously
-  const runnerScript = join(PROJECT_ROOT, "runner.py");
+  const runnerScript = join(getProjectRoot(), "runner.py");
   const args = [
     runnerScript,
     "--target", target,
@@ -101,7 +104,7 @@ export async function POST(request: Request) {
 
   try {
     const child = spawn(PYTHON_BIN, args, {
-      cwd: PROJECT_ROOT,
+      cwd: getProjectRoot(),
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
       env: {
@@ -117,7 +120,7 @@ export async function POST(request: Request) {
     await updateJob(job.id, { status: "running", pid: child.pid });
 
     // Capture output to log file
-    const logFile = join(PROJECT_ROOT, "reports", ".jobs", `${job.id}.log`);
+    const logFile = join(getProjectRoot(), "reports", ".jobs", `${job.id}.log`);
     const { createWriteStream } = await import("fs");
     const logStream = createWriteStream(logFile, { flags: "a" });
     child.stdout?.pipe(logStream);
@@ -125,7 +128,16 @@ export async function POST(request: Request) {
 
     child.on("exit", async (code) => {
       if (code === 0) {
-        const findings = await countAllFindings(toolNames);
+        // Read runner's summary for accurate findings count
+        let findings = 0;
+        try {
+          const summaryPath = join(getProjectRoot(), "reports", ".jobs", `${job.id}-summary.json`);
+          const raw = await readFile(summaryPath, "utf-8");
+          const summary = JSON.parse(raw);
+          findings = summary.total_findings || 0;
+        } catch {
+          findings = await countAllFindings(toolNames);
+        }
         await updateJob(job.id, { status: "completed", progress: 100, findings });
       } else {
         await updateJob(job.id, { status: "failed", error: `Process exited with code ${code}` });

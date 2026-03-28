@@ -1,15 +1,21 @@
 // ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
-import { readdir, readFile } from "fs/promises";
+import { readdir, readFile, rename, unlink } from "fs/promises";
 import { join } from "path";
 import type { ScanReport } from "./types";
 
-const REPORTS_DIR = process.env.REPORTS_DIR || "/data/reports/unified";
-const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
+const SAFE_FILENAME_RE = /^[a-zA-Z0-9._-]+$/;
+
+function getReportsDir(): string {
+  return process.env.REPORTS_DIR || "/data/reports/unified";
+}
+function getProjectRoot(): string {
+  return process.env.PROJECT_ROOT || "/data";
+}
 
 /** List available scan report files (sorted newest first). */
 export async function listScans(): Promise<string[]> {
   try {
-    const files = await readdir(REPORTS_DIR);
+    const files = await readdir(getReportsDir());
     return files
       .filter((f) => f.endsWith(".json") && !f.startsWith("payload-stats"))
       .sort()
@@ -58,7 +64,7 @@ export async function loadScan(filename: string): Promise<ScanReport | null> {
   if (safe !== filename) return null;
 
   try {
-    const raw = await readFile(join(REPORTS_DIR, safe), "utf-8");
+    const raw = await readFile(join(getReportsDir(), safe), "utf-8");
     const data = JSON.parse(raw);
     return normalizeReport(data);
   } catch {
@@ -106,8 +112,8 @@ export interface PayloadStats {
 /** Load payload engine stats from reports/payload-stats.json. */
 export async function loadPayloadStats(): Promise<PayloadStats | null> {
   const candidates = [
-    join(PROJECT_ROOT, "reports", "payload-stats.json"),
-    join(REPORTS_DIR, "..", "payload-stats.json"),
+    join(getProjectRoot(), "reports", "payload-stats.json"),
+    join(getReportsDir(), "..", "payload-stats.json"),
   ];
   for (const path of candidates) {
     try {
@@ -118,4 +124,32 @@ export async function loadPayloadStats(): Promise<PayloadStats | null> {
     }
   }
   return null;
+}
+
+/** Delete a scan report file. Returns true if deleted. */
+export async function deleteScan(filename: string): Promise<boolean> {
+  if (!SAFE_FILENAME_RE.test(filename)) return false;
+  try {
+    await unlink(join(getReportsDir(), filename));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Rename a scan report file. Returns the new filename or null on failure. */
+export async function renameScan(
+  oldFilename: string,
+  newFilename: string
+): Promise<string | null> {
+  if (!SAFE_FILENAME_RE.test(oldFilename)) return null;
+  if (!SAFE_FILENAME_RE.test(newFilename)) return null;
+  if (!newFilename.endsWith(".json")) return null;
+  try {
+    const dir = getReportsDir();
+    await rename(join(dir, oldFilename), join(dir, newFilename));
+    return newFilename;
+  } catch {
+    return null;
+  }
 }

@@ -250,4 +250,6 @@ except Exception as e:
 # ── Summary ─────────────────────────────────────────────
 
 print(f"\nPhase 8 Tests: {passed} passed, {failed} failed")
-sys.exit(0 if failed == 0 else 1)
+
+if __name__ == "__main__":
+    sys.exit(0 if failed == 0 else 1)

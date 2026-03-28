@@ -1,6 +1,6 @@
 // ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 import { NextResponse } from "next/server";
-import { getJob, updateJob } from "@/lib/jobs";
+import { getJob, updateJob, deleteJob } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -25,19 +25,24 @@ export async function DELETE(
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
-  if (job.status !== "running" && job.status !== "queued") {
-    return NextResponse.json({ error: "Job is not running" }, { status: 400 });
-  }
 
-  // Kill the process if we have a PID
-  if (job.pid) {
-    try {
-      process.kill(job.pid, "SIGTERM");
-    } catch {
-      // Process may have already exited
+  // Running/queued → cancel (kill process)
+  if (job.status === "running" || job.status === "queued") {
+    if (job.pid) {
+      try {
+        process.kill(job.pid, "SIGTERM");
+      } catch {
+        // Process may have already exited
+      }
     }
+    await updateJob(id, { status: "cancelled" });
+    return NextResponse.json({ ok: true, action: "cancelled" });
   }
 
-  await updateJob(id, { status: "cancelled" });
-  return NextResponse.json({ ok: true });
+  // Completed/failed/cancelled → delete the job file
+  const deleted = await deleteJob(id);
+  if (!deleted) {
+    return NextResponse.json({ error: "Failed to delete job" }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, action: "deleted" });
 }

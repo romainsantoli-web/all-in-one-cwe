@@ -158,6 +158,21 @@ def main():
     print(f"[runner] Done: {completed}/{len(results)} completed, {total_findings} findings")
     print(f"[runner] Summary: {summary_file}")
 
+    # Generate unified report so it appears in the Scans page
+    merge_script = PROJECT_ROOT / "scripts" / "merge-reports.py"
+    if merge_script.exists() and completed > 0 and not args.dry_run:
+        scan_date = time.strftime("%Y%m%d-%H%M%S")
+        try:
+            subprocess.run(
+                [python_bin, str(merge_script), "--scan-date", scan_date, "--target", args.target],
+                cwd=str(PROJECT_ROOT),
+                timeout=60,
+                capture_output=True,
+            )
+            print(f"[runner] Unified report: unified-report-{scan_date}.json")
+        except Exception as e:
+            print(f"[runner] Warning: merge-reports failed: {e}")
+
     # Exit with 0 if at least one tool completed, 1 if all failed
     sys.exit(0 if completed > 0 or args.dry_run else 1)
 
