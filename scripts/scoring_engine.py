@@ -97,15 +97,75 @@ def _extract_cwe(finding: dict) -> str | None:
     return None
 
 
+def _contextual_cvss_adjust(finding: dict, vector: str, score: float) -> tuple[str, float]:
+    """Apply contextual CVSS adjustments based on finding metadata.
+
+    Adjusts Attack Vector, Privileges Required, and User Interaction
+    based on real-world context (authenticated/unauthenticated, web/local).
+    """
+    adjustments = []
+    adjusted_vector = vector
+
+    # PR adjustment: if finding is unauthenticated, ensure PR:N
+    auth = (finding.get("authenticated") or finding.get("auth_required") or "").lower()
+    if auth in ("false", "no", "none", "unauthenticated", ""):
+        if "/PR:L/" in adjusted_vector or "/PR:H/" in adjusted_vector:
+            adjusted_vector = adjusted_vector.replace("/PR:L/", "/PR:N/").replace("/PR:H/", "/PR:N/")
+            adjustments.append("PR:N (unauthenticated)")
+    elif auth in ("true", "yes", "authenticated"):
+        if "/PR:N/" in adjusted_vector:
+            adjusted_vector = adjusted_vector.replace("/PR:N/", "/PR:L/")
+            adjustments.append("PR:L (authenticated)")
+
+    # UI adjustment: reflected XSS requires user interaction
+    cwe = _extract_cwe(finding)
+    title_lower = (finding.get("title") or finding.get("name") or "").lower()
+    if cwe == "CWE-79" and "reflected" in title_lower:
+        if "/UI:N/" in adjusted_vector:
+            adjusted_vector = adjusted_vector.replace("/UI:N/", "/UI:R/")
+            adjustments.append("UI:R (reflected XSS)")
+
+    # AV adjustment: local findings shouldn't be AV:N
+    if finding.get("attack_vector", "").lower() in ("local", "physical"):
+        if "/AV:N/" in adjusted_vector:
+            adjusted_vector = adjusted_vector.replace("/AV:N/", "/AV:L/")
+            adjustments.append("AV:L (local attack)")
+
+    # Approximate score delta per adjustment
+    adjusted_score = score
+    if adjustments:
+        for adj in adjustments:
+            if "PR:N" in adj:
+                adjusted_score = min(10.0, adjusted_score + 0.5)
+            elif "PR:L" in adj:
+                adjusted_score = max(0.0, adjusted_score - 0.5)
+            elif "UI:R" in adj:
+                adjusted_score = max(0.0, adjusted_score - 0.3)
+            elif "AV:L" in adj:
+                adjusted_score = max(0.0, adjusted_score - 1.0)
+        adjusted_score = round(adjusted_score, 1)
+
+    return adjusted_vector, adjusted_score
+
+
 def score_finding(finding: dict) -> dict:
-    """Add CVSS score and vector to a finding based on its CWE."""
+    """Add CVSS score and vector to a finding based on its CWE.
+
+    Applies contextual adjustments for auth state, attack vector, etc.
+    """
     cwe = _extract_cwe(finding)
     scored = dict(finding)
 
     if cwe and cwe in CWE_CVSS_MAP:
         cvss_data = CWE_CVSS_MAP[cwe]
-        scored["cvss_vector"] = cvss_data["vector"]
-        scored["cvss_score"] = cvss_data["score"]
+        base_vector = cvss_data["vector"]
+        base_score = cvss_data["score"]
+        adj_vector, adj_score = _contextual_cvss_adjust(finding, base_vector, base_score)
+        scored["cvss_vector"] = adj_vector
+        scored["cvss_score"] = adj_score
+        if adj_vector != base_vector:
+            scored["cvss_base_vector"] = base_vector
+            scored["cvss_base_score"] = base_score
     else:
         # Fallback: derive from severity
         sev = (finding.get("severity") or "unknown").lower()
