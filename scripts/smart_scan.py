@@ -38,6 +38,7 @@ from payloads import RiskLevel  # noqa: E402
 from scope import ScopeEnforcer, ScopeParser  # noqa: E402
 from tech_detector import detect_tech_stack  # noqa: E402
 from chain_engine import detect_chains, prioritize_chains, suggest_next_tools, build_chain_graph  # noqa: E402
+from validators import ScanValidator  # noqa: E402
 
 logger = logging.getLogger("smart_scan")
 
@@ -172,7 +173,26 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
         scope = ScopeParser.from_urls([args.target])
         scope_enforcer = ScopeEnforcer(scope)
 
-    # ── Step 1.5: Tech Stack Detection ──────────────────
+    # ── Step 1.5a: Initialize Validator ─────────────────
+    validator = ScanValidator(scope_enforcer=scope_enforcer, memory=scan_memory)
+
+    # ── Step 1.5b: Preflight Check ─────────────────────
+    preflight_ctx = {}
+    if scope_enforcer:
+        preflight_ctx["scope"] = {"targets": [t.url for t in scope_enforcer.scope.targets]}
+    preflight_results = validator.preflight_check(preflight_ctx)
+    preflight_pass = all(r.verdict in ("PASS", "SKIP") for r in preflight_results)
+    result["pipeline_steps"].append("preflight_check")
+    result["preflight"] = [r.to_dict() for r in preflight_results]
+    for r in preflight_results:
+        status = "✓" if r.verdict == "PASS" else "⚠" if r.verdict in ("WARN", "SKIP") else "✗"
+        print(f"[preflight] {status} {r.gate_name}: {r.reason}")
+    if not preflight_pass:
+        failed = [r for r in preflight_results if r.verdict == "FAIL"]
+        if failed and not args.dry_run:
+            print(f"[preflight] ⚠ {len(failed)} gate(s) failed — continuing with warnings")
+
+    # ── Step 1.5c: Tech Stack Detection ──────────────────
     reports_dir = Path(__file__).parent.parent / "reports"
     tech_stack: list[str] = []
     try:
@@ -324,6 +344,29 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
                 result["chain_tools_injected"] = injected
                 print(f"[chains] Suggested follow-up tools: {', '.join(injected)}")
 
+    # ── Step 6.7: Validation Gates (per-finding) ──────
+    if findings:
+        validation_result = validator.validate_report(findings)
+        validated_findings = validation_result["validated"]
+        rejected_findings = validation_result["rejected"]
+        result["validation"] = validation_result["stats"]
+        result["pipeline_steps"].append("validation_gates")
+        print(f"[validate] {validation_result['stats']['validated']}/{len(findings)} findings passed gates")
+        if rejected_findings:
+            print(f"[validate] {len(rejected_findings)} findings rejected:")
+            for rf in rejected_findings[:5]:
+                reasons = rf.get('validation', {}).get('rejected_reasons', [])
+                print(f"  ✗ {rf.get('title', rf.get('name', '?'))[:50]} — {'; '.join(reasons[:2])}")
+
+            # Export rejected findings for audit trail
+            rejected_path = Path(__file__).parent.parent / "reports" / "rejected-findings.json"
+            rejected_path.parent.mkdir(parents=True, exist_ok=True)
+            rejected_path.write_text(json.dumps(rejected_findings, indent=2, default=str))
+
+        # Use validated findings for downstream pipeline
+        findings = validated_findings
+        result["findings_in_scope"] = len(findings)
+
     if findings and not args.offline:
         provider = args.provider or llm_cfg.get("provider", "auto")
         max_llm = llm_cfg.get("max_findings", 10)
@@ -441,6 +484,10 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
     print(f"  Tools:     {len(result['tools_selected'])}")
     print(f"  Findings:  {result.get('findings_in_scope', len(findings))}")
     print(f"  Chains:    {result.get('chains_detected', 0)}")
+    vstats = result.get('validation', {})
+    if vstats:
+        print(f"  Validated: {vstats.get('validated', 0)}/{vstats.get('total', 0)} ({vstats.get('pass_rate', 0):.0%})")
+        print(f"  Rejected:  {vstats.get('rejected', 0)}")
     print(f"  Memory:    {result['memory_ingested']} ingested")
     print(f"{'='*60}")
 

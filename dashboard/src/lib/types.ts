@@ -18,6 +18,22 @@ export interface Finding {
   composite_score?: number;
   duplicate_of?: string;
   duplicate_count?: number;
+  validation?: {
+    gates_passed: number;
+    gates_failed: number;
+    gates_warned: number;
+    gates_skipped: number;
+    total_gates: number;
+    overall_verdict: "PASS" | "WARN" | "FAIL" | "REJECTED";
+    rejected_reasons: string[];
+    results: Array<{
+      gate: string;
+      verdict: "PASS" | "FAIL" | "WARN" | "SKIP";
+      reason: string;
+      confidence: number;
+      suggestion?: string;
+    }>;
+  };
 }
 
 export interface ScanReport {

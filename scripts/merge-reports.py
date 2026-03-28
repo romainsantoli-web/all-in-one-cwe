@@ -361,6 +361,7 @@ def main():
     parser = argparse.ArgumentParser(description="Merge security scan reports")
     parser.add_argument("--scan-date", default=datetime.now().strftime("%Y%m%d-%H%M%S"))
     parser.add_argument("--output", default=None)
+    parser.add_argument("--target", default=None, help="Scan target URL")
     args = parser.parse_args()
 
     if args.output is None:
@@ -369,18 +370,29 @@ def main():
     all_findings = []
     stats = {}
 
-    for tool_name, parser_name in TOOL_PARSERS.items():
+    # Auto-discover all tool directories in reports/
+    tool_dirs = set()
+    if REPORTS_DIR.exists():
+        for entry in REPORTS_DIR.iterdir():
+            if entry.is_dir() and not entry.name.startswith("."):
+                tool_dirs.add(entry.name)
+    # Also include explicitly mapped tools (in case dir doesn't exist yet)
+    tool_dirs.update(TOOL_PARSERS.keys())
+    # Exclude non-tool directories
+    tool_dirs.discard("unified")
+
+    for tool_name in sorted(tool_dirs):
         data = load_report(tool_name)
         if data is None:
-            print(f"  [-] {tool_name}: no report found")
-            stats[tool_name] = 0
             continue
 
+        parser_name = TOOL_PARSERS.get(tool_name, "parse_python_scanner")
         parser_func = globals()[parser_name]
         findings = parser_func(data)
-        stats[tool_name] = len(findings)
-        all_findings.extend(findings)
-        print(f"  [+] {tool_name}: {len(findings)} findings")
+        if findings:
+            stats[tool_name] = len(findings)
+            all_findings.extend(findings)
+            print(f"  [+] {tool_name}: {len(findings)} findings")
 
     # Deduplicate by (tool, id, url)
     seen = set()
@@ -391,9 +403,38 @@ def main():
             seen.add(key)
             unique.append(f)
 
+    # Validation gates — annotate findings (keep rejected for audit trail)
+    try:
+        from validators import ScanValidator
+        validator = ScanValidator()
+        for f in unique:
+            summary = validator.finding_quality_gate(f)
+            f["validation"] = summary.to_dict()
+        rejected_count = sum(
+            1 for f in unique
+            if f.get("validation", {}).get("overall_verdict") == "REJECTED"
+        )
+        if rejected_count:
+            print(f"  [!] {rejected_count} findings rejected by validation gates")
+    except ImportError:
+        pass  # validators module not available — skip
+
+    # Try to extract target from findings if not provided
+    target = args.target
+    if not target and unique:
+        urls = [f.get("url", "") for f in unique if f.get("url")]
+        if urls:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(urls[0])
+                target = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else None
+            except Exception:
+                pass
+
     report = {
         "scan_date": args.scan_date,
         "generated_at": datetime.now().isoformat(),
+        "target": target,
         "total_findings": len(unique),
         "by_severity": {},
         "by_tool": stats,

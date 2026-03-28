@@ -6,6 +6,7 @@ import type { Finding } from "@/lib/types";
 import SeverityBadge from "./SeverityBadge";
 import AskAIButton from "./AskAIButton";
 import SmartAnalyzeButton from "./SmartAnalyzeButton";
+import ValidationBadge from "./ValidationBadge";
 import { SEVERITY_ORDER } from "@/lib/types";
 
 export default function FindingsTable({ findings }: { findings: Finding[] }) {
@@ -17,6 +18,7 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
     "severity"
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [validationFilter, setValidationFilter] = useState<string>("all");
 
   const tools = useMemo(
     () => [...new Set(findings.map((f) => f.tool))].sort(),
@@ -34,6 +36,12 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
     }
     if (toolFilter !== "all") {
       result = result.filter((f) => f.tool === toolFilter);
+    }
+    if (validationFilter !== "all") {
+      result = result.filter((f) => {
+        const v = f.validation?.overall_verdict?.toLowerCase() || "none";
+        return v === validationFilter;
+      });
     }
     if (search) {
       const q = search.toLowerCase();
@@ -62,7 +70,7 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
     });
 
     return result;
-  }, [findings, severityFilter, toolFilter, search, sortField, sortDir]);
+  }, [findings, severityFilter, toolFilter, validationFilter, search, sortField, sortDir]);
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -108,6 +116,17 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
             </option>
           ))}
         </select>
+        <select
+          value={validationFilter}
+          onChange={(e) => setValidationFilter(e.target.value)}
+          className="px-3 py-1.5 bg-[var(--bg)] border border-[var(--border)] rounded text-sm"
+        >
+          <option value="all">All validation</option>
+          <option value="pass">✓ Validated</option>
+          <option value="warn">⚠ Warnings</option>
+          <option value="fail">✗ Failed</option>
+          <option value="rejected">⊘ Rejected</option>
+        </select>
         <span className="text-[var(--text-muted)] text-sm self-center">
           {filtered.length} / {findings.length}
         </span>
@@ -139,11 +158,12 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
                 CVSS {sortField === "cvss" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th className="p-3">URL</th>
+              <th className="p-3">Validation</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((f, i) => {
-              const key = f.id || `${f.tool}-${i}`;
+              const key = f.id ? `${f.id}-${i}` : `${f.tool}-${i}`;
               const isExpanded = expandedId === key;
               return (
                 <Fragment key={key}>
@@ -167,10 +187,13 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
                     <td className="p-3 text-[var(--text-muted)] max-w-xs truncate">
                       {f.url || f.endpoint || "—"}
                     </td>
+                    <td className="p-3">
+                      <ValidationBadge validation={f.validation} />
+                    </td>
                   </tr>
                   {isExpanded && (
                     <tr key={`${key}-detail`} className="bg-[var(--bg)]">
-                      <td colSpan={6} className="p-4">
+                      <td colSpan={7} className="p-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           {f.description && (
                             <div>
