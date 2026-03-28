@@ -79,8 +79,19 @@ class ScanMemory:
         logger.info("Ingested %d findings, skipped %d duplicates", ingested, skipped)
         return {"ingested": ingested, "skipped": skipped, "total": len(findings)}
 
-    def ingest_findings(self, findings: list[dict]) -> int:
-        """Ingest findings directly (not from file). Returns count ingested."""
+    def ingest_findings(
+        self,
+        findings: list[dict],
+        domain: str = "",
+        tech_stack: list[str] | None = None,
+    ) -> int:
+        """Ingest findings directly (not from file). Returns count ingested.
+
+        Args:
+            findings: List of finding dicts.
+            domain: Target domain these findings belong to.
+            tech_stack: Detected tech stack for cross-target memory.
+        """
         if not self._client.available:
             return 0
 
@@ -95,8 +106,14 @@ class ScanMemory:
                 "url": f.get("url", ""),
                 "cvss": f.get("cvss_score", 0),
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "domain": domain or f.get("domain", ""),
+                "tech_stack": tech_stack or f.get("tech_stack", []),
             }
-            self._client.store(key, record, metadata={"type": "finding"})
+            self._client.store(key, record, metadata={
+                "type": "finding",
+                "domain": record["domain"],
+                "tech_stack": ",".join(record["tech_stack"]),
+            })
             count += 1
         return count
 
@@ -138,6 +155,141 @@ class ScanMemory:
             lines.append("")
 
         return "\n".join(lines)
+
+    # ── Cross-Target Intelligence ───────────────────────────────────────────
+
+    def recall_by_tech_stack(self, tech_stack: list[str], limit: int = 10) -> list[dict]:
+        """Find past findings on targets with a similar tech stack.
+
+        Searches memory for findings tagged with any of the given technologies.
+        Useful for suggesting tools/vulns known to work on similar stacks.
+
+        Args:
+            tech_stack: e.g. ["nextjs", "react", "node", "aws"]
+            limit: Max results to return.
+
+        Returns:
+            List of memory records with matching tech context.
+        """
+        if not self._client.available or not tech_stack:
+            return []
+
+        query = f"tech_stack {' '.join(tech_stack)}"
+        results = self._client.search(query, limit=limit)
+        return results
+
+    def get_effectiveness_scores(self) -> dict[str, dict]:
+        """Compute tool effectiveness scores from memory history.
+
+        Aggregates past findings to rank tools by:
+          - hit_rate: proportion of scans where this tool found something
+          - avg_severity: average severity of findings (high/medium/low)
+          - best_tech_stacks: tech stacks where this tool performs best
+
+        Returns:
+            {"nuclei": {"hit_count": 42, "avg_severity": "high", "tech_stacks": ["php", "laravel"]}}
+        """
+        if not self._client.available:
+            return {}
+
+        # Pull all findings from memory
+        results = self._client.search("finding", limit=500)
+        if not results:
+            return {}
+
+        # Aggregate by tool
+        tool_stats: dict[str, dict] = {}
+        severity_weight = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+
+        for mem in results:
+            data = mem.get("data", mem)
+            tool = data.get("tool", "")
+            if not tool:
+                continue
+
+            if tool not in tool_stats:
+                tool_stats[tool] = {
+                    "hit_count": 0,
+                    "severity_sum": 0,
+                    "tech_stacks": {},
+                }
+
+            stats = tool_stats[tool]
+            stats["hit_count"] += 1
+            sev = data.get("severity", "low").lower()
+            stats["severity_sum"] += severity_weight.get(sev, 1)
+
+            for tech in data.get("tech_stack", []):
+                stats["tech_stacks"][tech] = stats["tech_stacks"].get(tech, 0) + 1
+
+        # Format output
+        scores: dict[str, dict] = {}
+        sev_labels = {4: "critical", 3: "high", 2: "medium", 1: "low", 0: "info"}
+        for tool, raw in tool_stats.items():
+            count = raw["hit_count"]
+            avg_sev = round(raw["severity_sum"] / count) if count else 0
+            top_techs = sorted(
+                raw["tech_stacks"].items(), key=lambda x: x[1], reverse=True,
+            )[:5]
+            scores[tool] = {
+                "hit_count": count,
+                "avg_severity": sev_labels.get(avg_sev, "medium"),
+                "tech_stacks": [t[0] for t in top_techs],
+            }
+
+        return scores
+
+    def ingest_domain_profile(
+        self,
+        domain: str,
+        tech_stack: list[str],
+        findings_summary: dict | None = None,
+    ) -> bool:
+        """Store a domain profile in memory for future cross-target recall.
+
+        Args:
+            domain: e.g. "example.com"
+            tech_stack: Detected tech stack.
+            findings_summary: Optional {"total": N, "by_severity": {}, "by_cwe": {}}
+
+        Returns:
+            True if stored successfully.
+        """
+        if not self._client.available or not domain:
+            return False
+
+        key = f"domain_{hashlib.sha256(domain.encode()).hexdigest()[:12]}"
+        record = {
+            "domain": domain,
+            "tech_stack": tech_stack,
+            "last_scanned": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "findings_summary": findings_summary or {},
+        }
+        self._client.store(key, record, metadata={
+            "type": "domain_profile",
+            "domain": domain,
+            "tech_stack": ",".join(tech_stack),
+        })
+        logger.info("Stored domain profile: %s (tech: %s)", domain, tech_stack)
+        return True
+
+    def recall_domain_profile(self, domain: str) -> dict | None:
+        """Retrieve stored domain profile.
+
+        Args:
+            domain: Target domain.
+
+        Returns:
+            Domain profile dict or None.
+        """
+        if not self._client.available or not domain:
+            return None
+
+        key = f"domain_{hashlib.sha256(domain.encode()).hexdigest()[:12]}"
+        result = self._client.get(key)
+        if result:
+            return result.get("data", result)
+        return None
 
     # ── Stats ───────────────────────────────────────────────────────────────
 

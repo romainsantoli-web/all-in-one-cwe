@@ -36,6 +36,7 @@ from graph import DependencyGraph  # noqa: E402
 from memory.scan_memory import ScanMemory  # noqa: E402
 from payloads import RiskLevel  # noqa: E402
 from scope import ScopeEnforcer, ScopeParser  # noqa: E402
+from tech_detector import detect_tech_stack  # noqa: E402
 
 logger = logging.getLogger("smart_scan")
 
@@ -73,6 +74,7 @@ def smart_select_tools(
     graph: DependencyGraph,
     memory: ScanMemory | None,
     profile: str,
+    tech_stack: list[str] | None = None,
 ) -> list[str]:
     """Intelligently select tools based on scope, graph, and memory."""
     # Start with profile tools
@@ -101,6 +103,32 @@ def smart_select_tools(
                 if tool and tool not in all_tools:
                     all_tools.append(tool)
                     logger.info("Memory suggested tool: %s (from past finding)", tool)
+
+    # Effectiveness-based prioritization: rank tools by historical performance
+    if memory and memory.available:
+        scores = memory.get_effectiveness_scores()
+        if scores:
+            # Sort tools: highest hit_count first (stable — preserves profile order for ties)
+            all_tools.sort(
+                key=lambda t: scores.get(t, {}).get("hit_count", 0),
+                reverse=True,
+            )
+            top3 = [(t, scores[t]["hit_count"]) for t in all_tools[:3] if t in scores]
+            if top3:
+                logger.info("Top tools by effectiveness: %s", top3)
+
+    # Tech-stack based injection: if memory recalls vulns on similar stacks
+    if memory and memory.available and tech_stack:
+        tech_findings = memory.recall_by_tech_stack(tech_stack, limit=20)
+        injected = set()
+        for item in tech_findings:
+            data = item.get("data", item)
+            tool = data.get("tool", "")
+            if tool and tool not in all_tools:
+                all_tools.append(tool)
+                injected.add(tool)
+        if injected:
+            logger.info("Tech-stack memory injected tools: %s", injected)
 
     return all_tools
 
@@ -143,6 +171,18 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
         scope = ScopeParser.from_urls([args.target])
         scope_enforcer = ScopeEnforcer(scope)
 
+    # ── Step 1.5: Tech Stack Detection ──────────────────
+    reports_dir = Path(__file__).parent.parent / "reports"
+    tech_stack: list[str] = []
+    try:
+        tech_stack = detect_tech_stack(reports_dir, target=args.target)
+        if tech_stack:
+            result["tech_stack"] = tech_stack
+            result["pipeline_steps"].append("tech_detected")
+            print(f"[tech] Detected: {', '.join(tech_stack)}")
+    except Exception as e:
+        logger.warning("Tech detection failed: %s", e)
+
     # ── Step 2: Initialize Memory ───────────────────────
     scan_memory = None
     if memory_cfg.get("enabled", True) and not args.no_memory:
@@ -166,7 +206,7 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
     use_smart = args.smart_select or scan_cfg.get("smart_select", False)
 
     if use_smart:
-        tools = smart_select_tools(scope_enforcer, graph, scan_memory, profile)
+        tools = smart_select_tools(scope_enforcer, graph, scan_memory, profile, tech_stack)
         result["pipeline_steps"].append("smart_select")
     else:
         tools = PROFILES.get(profile) or graph.all_tools()
@@ -281,11 +321,27 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
             logger.warning("LLM analysis failed: %s", e)
 
     # ── Step 7: Memory Ingest ──────────────────────────
+    domain = args.domain or ""
     if scan_memory and scan_memory.available and findings and memory_cfg.get("auto_ingest", True):
-        ingested = scan_memory.ingest_findings(findings)
+        ingested = scan_memory.ingest_findings(findings, domain=domain, tech_stack=tech_stack)
         result["memory_ingested"] = ingested
         result["pipeline_steps"].append("memory_ingested")
         print(f"[memory] Ingested {ingested} findings")
+
+    # ── Step 7.5: Domain Profile Ingest ────────────────
+    if scan_memory and scan_memory.available and domain:
+        sev_counts: dict[str, int] = {}
+        cwe_counts: dict[str, int] = {}
+        for f in findings:
+            sev = f.get("severity", "unknown").lower()
+            sev_counts[sev] = sev_counts.get(sev, 0) + 1
+            cwe = f.get("cwe_normalized", f.get("cwe", ""))
+            if cwe:
+                cwe_counts[cwe] = cwe_counts.get(cwe, 0) + 1
+        summary = {"total": len(findings), "by_severity": sev_counts, "by_cwe": cwe_counts}
+        scan_memory.ingest_domain_profile(domain, tech_stack, summary)
+        result["pipeline_steps"].append("domain_profile_ingested")
+        print(f"[memory] Domain profile stored: {domain} ({len(tech_stack)} techs)")
 
     # ── Step 8: Graph suggestions ──────────────────────
     if graph_cfg.get("auto_suggest", True) and findings:

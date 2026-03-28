@@ -2,6 +2,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { getAllTools, PARALLEL_GROUPS, LIGHT_TOOLS, MEDIUM_TOOLS, CWE_TRIGGERS, LLM_PROVIDERS } from "@/lib/tools-data";
+import DomainIntelCard from "@/components/DomainIntelCard";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,9 @@ export default async function SmartScanPage() {
           Intelligent pipeline: Scope → Memory → Graph → Scan → LLM → Ingest → Payloads
         </p>
       </div>
+
+      {/* Domain Intelligence (cross-target memory) */}
+      <DomainIntelCard domain="" />
 
       {/* Pipeline visualization */}
       <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-5 mb-6">
