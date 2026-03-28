@@ -37,6 +37,7 @@ from memory.scan_memory import ScanMemory  # noqa: E402
 from payloads import RiskLevel  # noqa: E402
 from scope import ScopeEnforcer, ScopeParser  # noqa: E402
 from tech_detector import detect_tech_stack  # noqa: E402
+from chain_engine import detect_chains, prioritize_chains, suggest_next_tools, build_chain_graph  # noqa: E402
 
 logger = logging.getLogger("smart_scan")
 
@@ -293,6 +294,36 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
         result["pipeline_steps"].append("graph_exported")
 
     # ── Step 6: AI Analysis ────────────────────────────
+    # ── Step 6.5 first: Chain Detection ────────────────
+    chains = []
+    if findings:
+        chains = detect_chains(findings)
+        chains = prioritize_chains(chains)
+        if chains:
+            result["chains_detected"] = len(chains)
+            result["pipeline_steps"].append("chains_detected")
+            chain_graph = build_chain_graph(chains)
+            result["chain_graph"] = chain_graph
+
+            # Export chain graph for dashboard
+            chain_path = Path(__file__).parent.parent / "reports" / "chain-graph.json"
+            chain_path.parent.mkdir(parents=True, exist_ok=True)
+            chain_path.write_text(json.dumps(chain_graph, indent=2, default=str))
+
+            print(f"[chains] {len(chains)} exploit chains detected:")
+            for c in chains[:5]:
+                print(f"  → {c.rule_id} ({c.severity}) — {c.final_impact}")
+
+            # Inject chain-suggested tools for follow-up scans
+            chain_tools = suggest_next_tools(chains)
+            injected = []
+            for tool in chain_tools:
+                if tool not in (result.get("tools_selected") or []):
+                    injected.append(tool)
+            if injected:
+                result["chain_tools_injected"] = injected
+                print(f"[chains] Suggested follow-up tools: {', '.join(injected)}")
+
     if findings and not args.offline:
         provider = args.provider or llm_cfg.get("provider", "auto")
         max_llm = llm_cfg.get("max_findings", 10)
@@ -409,6 +440,7 @@ def run_smart_scan(args: argparse.Namespace) -> dict:
     print(f"  Steps:     {' → '.join(result['pipeline_steps'])}")
     print(f"  Tools:     {len(result['tools_selected'])}")
     print(f"  Findings:  {result.get('findings_in_scope', len(findings))}")
+    print(f"  Chains:    {result.get('chains_detected', 0)}")
     print(f"  Memory:    {result['memory_ingested']} ingested")
     print(f"{'='*60}")
 

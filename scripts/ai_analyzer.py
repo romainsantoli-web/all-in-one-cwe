@@ -23,6 +23,7 @@ from pathlib import Path
 # Allow imports from parent dir (llm/ package)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from chain_engine import detect_chains, get_chain_summary, prioritize_chains  # noqa: E402
 from llm.base import LLMMessage  # noqa: E402
 from llm.registry import get_provider, list_providers  # noqa: E402
 from memory.scan_memory import ScanMemory  # noqa: E402
@@ -162,6 +163,7 @@ def analyze_with_llm(
     provider_name: str = "auto",
     model: str | None = None,
     scan_memory: ScanMemory | None = None,
+    chain_context: str = "",
 ) -> dict:
     """Generate analysis using any configured LLM provider."""
     # Build memory context if available
@@ -180,14 +182,22 @@ def analyze_with_llm(
     )
     if memory_context:
         prompt += f"{memory_context}\n"
+    if chain_context:
+        prompt += f"\n{chain_context}\n\n"
     prompt += (
         f"Provide:\n"
         f"1. A clear explanation of the vulnerability\n"
         f"2. Business impact assessment\n"
         f"3. A concrete PoC (curl command or steps)\n"
-        f"4. Specific remediation steps\n\n"
-        f"Format as JSON with keys: explanation, impact, poc_suggestion, remediation"
+        f"4. Specific remediation steps\n"
     )
+    if chain_context:
+        prompt += f"5. Chain exploitation path: step-by-step escalation from initial finding to final impact\n"
+    prompt += (
+        f"\nFormat as JSON with keys: explanation, impact, poc_suggestion, remediation"
+    )
+    if chain_context:
+        prompt += ", chain_exploitation"
 
     resolved = provider_name if provider_name != "auto" else _auto_detect_provider()
     if not resolved:
@@ -291,14 +301,34 @@ def main() -> None:
         args.provider != "auto" or _auto_detect_provider() is not None
     )
 
+    # Detect exploit chains across all findings
+    chains = detect_chains(findings)
+    chains = prioritize_chains(chains)
+    chain_context = get_chain_summary(chains)
+    if chains:
+        print(f"Chain Engine: {len(chains)} exploit chains detected")
+        for c in chains[:5]:
+            print(f"  → {c.rule_id} ({c.severity}) — {c.final_impact}")
+
+    # Build per-finding chain lookup
+    finding_chains: dict[str, str] = {}
+    for c in chains:
+        fid = c.trigger_finding.get("id") or c.trigger_finding.get("name") or ""
+        if fid:
+            existing = finding_chains.get(str(fid), "")
+            per_finding_ctx = get_chain_summary([c])
+            finding_chains[str(fid)] = f"{existing}\n{per_finding_ctx}" if existing else per_finding_ctx
+
     analyzed = []
     llm_count = 0
     for f in findings:
         sev = (f.get("severity") or "unknown").lower()
+        fid = str(f.get("id") or f.get("name") or "")
+        f_chain_ctx = finding_chains.get(fid, "")
 
         # Use LLM only for critical/high findings (cost control)
         if use_llm and sev in ("critical", "high") and llm_count < args.max_llm:
-            analysis = analyze_with_llm(f, args.provider, args.model, scan_memory)
+            analysis = analyze_with_llm(f, args.provider, args.model, scan_memory, f_chain_ctx)
             llm_count += 1
             print(f"  [LLM] {f.get('cwe_normalized', 'N/A')} {f.get('name', '')[:40]}")
         else:
@@ -306,6 +336,11 @@ def main() -> None:
 
         enriched = dict(f)
         enriched["ai_analysis"] = analysis
+        # Attach chain data to finding if applicable
+        if fid in finding_chains:
+            enriched["chains"] = [
+                c.to_dict() for c in chains if (c.trigger_finding.get("id") or c.trigger_finding.get("name") or "") == fid
+            ]
         analyzed.append(enriched)
 
     metadata: dict = {
@@ -314,6 +349,7 @@ def main() -> None:
         "llm_analyzed": llm_count,
         "offline_analyzed": len(analyzed) - llm_count,
         "provider": args.provider if use_llm else "offline",
+        "chains_detected": len(chains),
     }
     if enforcer:
         metadata["scope"] = enforcer.summary()
@@ -321,6 +357,7 @@ def main() -> None:
     output = {
         "metadata": metadata,
         "findings": analyzed,
+        "chains": [c.to_dict() for c in chains],
     }
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)

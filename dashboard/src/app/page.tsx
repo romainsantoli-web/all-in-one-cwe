@@ -9,6 +9,7 @@ import CvssHistogram from "@/components/CvssHistogram";
 import FindingsTable from "@/components/FindingsTable";
 import ExportButton from "@/components/ExportButton";
 import QuickActions from "@/components/QuickActions";
+import ChainGraph from "@/components/ChainGraph";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,11 @@ export default async function HomePage() {
             {uniqueTools} <span className="text-sm text-[var(--text-muted)]">/</span> {uniqueCwes}
           </div>
         </div>
+      </div>
+
+      {/* Exploit Chains */}
+      <div className="mb-6">
+        <ChainGraph />
       </div>
 
       {/* Charts grid */}
