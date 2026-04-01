@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 # Security All-in-One CWE — Runner Script
 # Usage: ./runner.sh <target_url> [options]
 #
