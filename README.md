@@ -1,6 +1,5 @@
 # 🛡️ Security All-in-One CWE — Bug Bounty Testing Suite
 
-> ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 
 Suite complète de **59 outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
 Tous les outils tournent via Docker Compose — un seul `make run` pour tout lancer.
