@@ -36,6 +36,7 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 ![DefectDojo Import](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/defectdojo.png)
 ![Terminal + PixelDog](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/terminal.png)
 ![Password Crack](screenshots/password-crack.png)
+![Shell Tamagotchi](screenshots/shell-tamagotchi.png)
 
 **Vidéo démo 60 secondes** : [Voir la démo](https://www.youtube.com/watch?v=...) *(à ajouter quand tu auras la vidéo)*
 

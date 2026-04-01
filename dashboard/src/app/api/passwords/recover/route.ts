@@ -1,7 +1,8 @@
 // ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
 import { NextRequest } from "next/server";
 import { spawn, ChildProcess } from "child_process";
-import { writeFileSync, unlinkSync, existsSync } from "fs";
+import { writeFileSync, unlinkSync, existsSync, statSync } from "fs";
+import { execFileSync } from "child_process";
 import path from "path";
 import os from "os";
 import crypto from "crypto";
@@ -156,16 +157,51 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // --- If target is a directory (e.g. MetaMask LevelDB), extract vault JSON first ---
+  let extractedVaultTmpPath: string | null = null;
+  let effectiveTargetPath = targetPath!;
+
+  if (statSync(targetPath!).isDirectory()) {
+    const id = crypto.randomBytes(8).toString("hex");
+    extractedVaultTmpPath = path.join(os.tmpdir(), `vault-extracted-${id}.json`);
+    try {
+      execFileSync("node", [CLI_PATH, "extract", "-p", targetPath!, "-o", extractedVaultTmpPath], {
+        cwd: V4_ROOT,
+        timeout: 30000,
+        env: {
+          ...process.env,
+          UV_THREADPOOL_SIZE: String(Math.max(128, os.cpus().length * 16)),
+          __MM_POOL_OK: "1",
+          FORCE_COLOR: "0",
+          NO_COLOR: "1",
+        },
+      });
+      if (!existsSync(extractedVaultTmpPath)) {
+        return new Response(
+          JSON.stringify({ error: "Failed to extract vault from LevelDB directory" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      effectiveTargetPath = extractedVaultTmpPath;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return new Response(
+        JSON.stringify({ error: `Vault extraction failed: ${msg}` }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
   // --- Build CLI args ---
   const useUniversal = !!filePath && !vaultPath; // crack-file for non-vault files
   const args: string[] = [CLI_PATH];
 
   if (useUniversal) {
-    args.push("crack-file", "-f", targetPath!);
+    args.push("crack-file", "-f", effectiveTargetPath);
     if (format) args.push("--format", format);
     if (salt) args.push("--salt", salt);
   } else {
-    args.push("crack", "-v", targetPath!);
+    args.push("crack", "-v", effectiveTargetPath);
     args.push("-s", strategy);
     args.push("--charset", charset);
   }
@@ -242,9 +278,12 @@ export async function POST(req: NextRequest) {
         sendEvent("done", { exitCode: code });
         controller.close();
 
-        // Cleanup tmp profile
+        // Cleanup tmp files
         if (profileTmpPath) {
           try { unlinkSync(profileTmpPath); } catch { /* ignore */ }
+        }
+        if (extractedVaultTmpPath) {
+          try { unlinkSync(extractedVaultTmpPath); } catch { /* ignore */ }
         }
       });
 
