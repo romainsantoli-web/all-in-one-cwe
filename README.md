@@ -1,7 +1,14 @@
 # 🛡️ Security All-in-One CWE — Bug Bounty Testing Suite
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Stars](https://img.shields.io/github/stars/romainsantoli-web/all-in-one-cwe)
+![Last Commit](https://img.shields.io/github/last-commit/romainsantoli-web/all-in-one-cwe)
+
 Suite complète de **70+ outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
-Docker Compose + binaires natifs + scanners Python custom — un seul `make setup-all` pour tout installer.
+Tous les outils tournent via Docker Compose — un seul `make run` pour tout lancer.
 
 ---
 
@@ -20,15 +27,27 @@ Docker Compose + binaires natifs + scanners Python custom — un seul `make setu
 
 ---
 
-## 🚀 Installation rapide
+## � Screenshots & Démo
+
+![Dashboard Home](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/dashboard.png)
+![Scan Launcher](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/launch.png)
+![LLM Agent](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/llm-agent.png)
+![DefectDojo Import](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/defectdojo.png)
+![Terminal + PixelDog](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/terminal.png)
+
+**Vidéo démo 60 secondes** : [Voir la démo](https://www.youtube.com/watch?v=...) *(à ajouter quand tu auras la vidéo)*
+
+---
+
+## �🚀 Installation rapide
 
 ```bash
 # Cloner le repo
 git clone https://github.com/romainsantoli-web/all-in-one-cwe.git
 cd all-in-one-cwe
 
-# ⚡ TOUT installer en une seule commande (Docker + natif + Python + git tools)
-make setup-all
+# Construire et tirer toutes les images
+make setup
 
 # Lancer un scan complet
 make run TARGET=https://target.example.com
