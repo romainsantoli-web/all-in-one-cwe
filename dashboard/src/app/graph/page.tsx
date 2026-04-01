@@ -2,7 +2,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { PARALLEL_GROUPS, CWE_TRIGGERS, TOOL_META, LIGHT_TOOLS, MEDIUM_TOOLS, getAllTools } from "@/lib/tools-data";
+
+const ToolGraph3D = dynamic(() => import("@/components/ToolGraph3D"), { ssr: false });
+const SiteMap3D = dynamic(() => import("@/components/SiteMap3D"), { ssr: false });
+
+type TabKey = "2d" | "3d" | "site-map";
+
+const TABS: { key: TabKey; label: string; icon: string }[] = [
+  { key: "2d", label: "Pipeline 2D", icon: "📊" },
+  { key: "3d", label: "Pipeline 3D", icon: "🧊" },
+  { key: "site-map", label: "Site Map", icon: "🌐" },
+];
 
 const GROUP_COLORS: Record<string, string> = {
   recon: "#4CAF50",
@@ -192,6 +204,43 @@ function drawGraph(canvas: HTMLCanvasElement, highlight: string | null, selected
 }
 
 export default function GraphPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("2d");
+
+  return (
+    <main className="px-6 py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Dependency Graph</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">
+          Tool pipeline visualization, 3D exploration &amp; site architecture mapping
+        </p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex border-b border-[var(--border)] mb-6">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? "border-[var(--accent)] text-[var(--accent)]"
+                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text)]"
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "2d" && <Pipeline2DView />}
+      {activeTab === "3d" && <ToolGraph3D />}
+      {activeTab === "site-map" && <SiteMap3D />}
+    </main>
+  );
+}
+
+function Pipeline2DView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [profile, setProfile] = useState("full");
@@ -216,13 +265,10 @@ export default function GraphPage() {
   ) + Object.values(CWE_TRIGGERS).reduce((sum, arr) => sum + arr.length, 0);
 
   return (
-    <main className="px-6 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dependency Graph</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
-          {tools.length} tools · {totalEdges} edges · {PARALLEL_GROUPS.length} groups · {Object.keys(CWE_TRIGGERS).length} CWE triggers
-        </p>
-      </div>
+    <div>
+      <p className="text-xs text-[var(--text-muted)] mb-4">
+        {tools.length} tools · {totalEdges} edges · {PARALLEL_GROUPS.length} groups · {Object.keys(CWE_TRIGGERS).length} CWE triggers
+      </p>
 
       {/* Controls */}
       <div className="flex items-center gap-4 mb-4">
@@ -348,6 +394,6 @@ export default function GraphPage() {
           })()}
         </div>
       </div>
-    </main>
+    </div>
   );
 }
