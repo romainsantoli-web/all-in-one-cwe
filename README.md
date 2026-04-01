@@ -35,6 +35,7 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 ![LLM Agent Map](screenshots/llm-agent-map.png)
 ![DefectDojo Import](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/defectdojo.png)
 ![Terminal + PixelDog](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/terminal.png)
+![Password Crack](screenshots/password-crack.png)
 
 **Vidéo démo 60 secondes** : [Voir la démo](https://www.youtube.com/watch?v=...) *(à ajouter quand tu auras la vidéo)*
 
