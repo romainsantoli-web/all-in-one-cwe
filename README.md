@@ -413,7 +413,7 @@ docker compose run --rm dalfox /app/dalfox url https://target.example.com/search
 
 ```bash
 # Fournir un token JWT à tester
-JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." make jwt
+JWT_TOKEN="eyJh......................CJ9" make jwt
 ```
 
 #### 🕸️ Reconnaissance DNS
