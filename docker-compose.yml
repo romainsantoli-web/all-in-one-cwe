@@ -1952,6 +1952,35 @@ services:
     profiles: ["python-scanners"]
 
   # ============================================================
+  # 54b. Header PoC Generator — CWE-79, CWE-319, CWE-1021
+  # ============================================================
+  header-poc-generator:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN adduser --disabled-password --uid 1001 scanner
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+        USER 1001
+    volumes:
+      - ./reports/header-poc-generator:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/header_poc_generator.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--providers"
+      - "--save-pocs"
+      - "/output/pocs"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-50}"
+    profiles: ["python-scanners"]
+
+  # ============================================================
   # 55. Timing Oracle — CWE-208, CWE-918
   # ============================================================
   timing-oracle:
@@ -2128,6 +2157,246 @@ services:
       - REPORTS_DIR=/data/reports/unified
       - NODE_ENV=production
     profiles: ["dashboard"]
+
+  # ============================================================
+  # 61. Hydra — Network brute-force (CWE-307, CWE-521)
+  # ============================================================
+  hydra:
+    <<: *common
+    image: vanhauser/hydra:latest
+    volumes:
+      - ./reports/hydra:/output
+      - ./configs:/configs:ro
+      - ./wordlists:/wordlists:ro
+    entrypoint: ["hydra"]
+    command:
+      - "-L"
+      - "/wordlists/users.txt"
+      - "-P"
+      - "/wordlists/passwords.txt"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.txt"
+      - "-t"
+      - "4"
+      - "-f"
+      - "${TARGET:-https://example.com}"
+      - "http-post-form"
+      - "/login:username=^USER^&password=^PASS^:F=incorrect"
+    profiles: ["brute-force"]
+
+  # ============================================================
+  # 62. mitmproxy — HTTP/S interception proxy (CWE-319, CWE-523)
+  # ============================================================
+  mitmproxy:
+    <<: *common
+    image: mitmproxy/mitmproxy:latest
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ./reports/mitmproxy:/output
+      - ./configs:/configs:ro
+    entrypoint: ["mitmdump"]
+    command:
+      - "--set"
+      - "flow_detail=3"
+      - "--set"
+      - "ssl_insecure=true"
+      - "-w"
+      - "/output/capture-${SCAN_DATE:-latest}.flow"
+    profiles: ["proxy"]
+
+  # ============================================================
+  # 63. Commix — OS Command Injection (CWE-78, CWE-77)
+  # ============================================================
+  commix:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/commixproject/commix.git /opt/commix && \
+            pip install --no-cache-dir requests && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/commix
+        ENTRYPOINT ["python", "commix.py"]
+    volumes:
+      - ./reports/commix:/output
+    command:
+      - "--url=${TARGET:-https://example.com}"
+      - "--batch"
+      - "--output-dir=/output"
+      - "--level=2"
+    profiles: ["injection"]
+
+  # ============================================================
+  # 64. Wapiti — DAST Web Scanner (CWE-79, CWE-89, CWE-78, CWE-22)
+  # ============================================================
+  wapiti:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN pip install --no-cache-dir wapiti3
+        ENTRYPOINT ["wapiti"]
+    volumes:
+      - ./reports/wapiti:/output
+    command:
+      - "--url"
+      - "${TARGET:-https://example.com}"
+      - "-f"
+      - "json"
+      - "-o"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+      - "--flush-session"
+      - "-S"
+      - "normal"
+    profiles: ["dast"]
+
+  # ============================================================
+  # 65. SearchSploit — Exploit-DB CLI lookup (CWE-search)
+  # ============================================================
+  searchsploit:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM kalilinux/kali-rolling
+        RUN apt-get update && \
+            apt-get install -y --no-install-recommends exploitdb && \
+            rm -rf /var/lib/apt/lists/*
+        ENTRYPOINT ["searchsploit"]
+    volumes:
+      - ./reports/searchsploit:/output
+    command:
+      - "--json"
+      - "${SEARCH_TERM:-apache}"
+    profiles: ["exploit-lookup"]
+
+  # ============================================================
+  # 66. Masscan — Mass port scanner (CWE-200, CWE-16)
+  # ============================================================
+  masscan:
+    <<: *common
+    image: adguard/masscan:latest
+    volumes:
+      - ./reports/masscan:/output
+    entrypoint: ["masscan"]
+    command:
+      - "${DOMAIN:-example.com}"
+      - "-p1-65535"
+      - "--rate=1000"
+      - "--banners"
+      - "-oJ"
+      - "/output/scan-${SCAN_DATE:-latest}.json"
+    cap_add:
+      - NET_RAW
+    profiles: ["network"]
+
+  # ============================================================
+  # 67. Recon-ng — OSINT Framework (CWE-200)
+  # ============================================================
+  recon-ng:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN apt-get update && apt-get install -y --no-install-recommends git && \
+            git clone --depth 1 https://github.com/lanmaster53/recon-ng.git /opt/recon-ng && \
+            pip install --no-cache-dir -r /opt/recon-ng/REQUIREMENTS && \
+            apt-get purge -y git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+        WORKDIR /opt/recon-ng
+        ENTRYPOINT ["python", "recon-ng"]
+    volumes:
+      - ./reports/recon-ng:/output
+      - ./configs:/configs:ro
+    command:
+      - "-r"
+      - "/configs/recon-ng-resource.rc"
+    profiles: ["osint"]
+
+  # ============================================================
+  # 68. Shodan CLI — Internet exposure lookup (CWE-200, CWE-16)
+  # ============================================================
+  shodan-cli:
+    <<: *common
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        RUN pip install --no-cache-dir shodan
+        ENTRYPOINT ["shodan"]
+    volumes:
+      - ./reports/shodan:/output
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+    command:
+      - "host"
+      - "${DOMAIN:-example.com}"
+    profiles: ["osint"]
+
+  # ============================================================
+  # 69. Brute-Forcer — Default creds + rate limit + password policy
+  # CWE-307, CWE-521, CWE-798
+  # ============================================================
+  brute-forcer:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/brute-forcer:/output
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/brute_forcer.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--rate-limit"
+      - "${RATE_LIMIT:-10}"
+      - "--config"
+      - "/configs/brute-forcer-config.yaml"
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN:-}
+    profiles: ["python-scanners"]
+
+  # ============================================================
+  # 70. OSINT Enricher — Shodan + SearchSploit + Recon-ng
+  # CWE-200, CWE-1035
+  # ============================================================
+  osint-enricher:
+    <<: *common
+    build:
+      context: ./tools/python-scanners
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        COPY requirements.txt /app/
+        RUN pip install --no-cache-dir -r /app/requirements.txt
+        COPY . /app/
+        WORKDIR /app
+    volumes:
+      - ./reports/osint-enricher:/output
+      - ./reports:/reports:ro
+      - ./configs:/configs:ro
+    entrypoint: ["python", "/app/osint_enricher.py"]
+    command:
+      - "--target"
+      - "${TARGET:-https://example.com}"
+      - "--domain"
+      - "${DOMAIN:-example.com}"
+      - "--config"
+      - "/configs/osint-enricher-config.yaml"
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - REPORTS_DIR=/reports
+    profiles: ["python-scanners"]
 
 volumes:
   trivy-cache:

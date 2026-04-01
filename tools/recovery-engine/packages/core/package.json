@@ -1,0 +1,13 @@
+{
+  "name": "@metamask-recovery/core",
+  "version": "1.0.0",
+  "description": "Core library: vault extraction, decryption, password generation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "license": "MIT"
+}

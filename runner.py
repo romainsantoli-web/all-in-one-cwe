@@ -110,9 +110,9 @@ def main():
     else:
         # Default tools by profile
         profile_tools = {
-            "light": ["header-classifier", "source-map-scanner"],
-            "medium": ["header-classifier", "source-map-scanner", "cors-misconfiguration",
-                       "timing-oracle", "jwt-vulnerability-scanner"],
+            "light": ["header-classifier", "source-map-scanner", "header-poc-generator"],
+            "medium": ["header-classifier", "source-map-scanner", "header-poc-generator",
+                       "timing-oracle", "redirect-cors", "xss-scanner"],
             "full": [p.stem.replace("_", "-") for p in SCANNERS_DIR.glob("*.py")
                      if not p.name.startswith("_")],
         }
@@ -163,13 +163,17 @@ def main():
     if merge_script.exists() and completed > 0 and not args.dry_run:
         scan_date = time.strftime("%Y%m%d-%H%M%S")
         try:
-            subprocess.run(
+            result = subprocess.run(
                 [python_bin, str(merge_script), "--scan-date", scan_date, "--target", args.target],
                 cwd=str(PROJECT_ROOT),
                 timeout=60,
                 capture_output=True,
+                text=True,
             )
-            print(f"[runner] Unified report: unified-report-{scan_date}.json")
+            if result.returncode == 0:
+                print(f"[runner] Unified report: unified-report-{scan_date}.json")
+            else:
+                print(f"[runner] Warning: merge-reports failed (exit {result.returncode}): {result.stderr[-500:] if result.stderr else 'no output'}")
         except Exception as e:
             print(f"[runner] Warning: merge-reports failed: {e}")
 

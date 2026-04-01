@@ -104,7 +104,7 @@ PARALLEL_GROUPS: list[dict] = [
     # ── Group 11: WAF evasion (after WAF detection) ───────────────
     {
         "name": "waf-evasion",
-        "tools": ["waf-bypass-py", "header-classifier"],
+        "tools": ["waf-bypass-py", "header-classifier", "header-poc-generator"],
         "depends_on": ["recon"],
     },
     # ── Group 12: Business logic testing ──────────────────────────
@@ -215,6 +215,7 @@ TOOL_META: dict[str, dict] = {
     "coupon-promo-fuzzer":  {"profile": "python-scanners",  "requires": "target"},
     "response-pii-detector": {"profile": "python-scanners", "requires": "target"},
     "header-classifier":    {"profile": "python-scanners",  "requires": "target"},
+    "header-poc-generator":  {"profile": "python-scanners",  "requires": "target"},
     "timing-oracle":        {"profile": "python-scanners",  "requires": "target"},
     "oauth-flow-scanner":   {"profile": "python-scanners",  "requires": "target"},
     "cdp-token-extractor":  {"profile": "python-scanners",  "requires": "target", "env_requires": ["CDP_URL"]},
@@ -225,7 +226,7 @@ TOOL_META: dict[str, dict] = {
 # CWE → downstream tool routing (conditional triggers)
 CWE_TRIGGERS: dict[str, list[str]] = {
     "CWE-918": ["ssrf-scanner"],      # SSRF found → deep SSRF scan
-    "CWE-79":  ["xss-scanner"],       # XSS found → deep XSS scan
+    "CWE-79":  ["xss-scanner", "header-poc-generator"],       # XSS found → deep XSS scan + header PoC
     "CWE-89":  ["sqlmap"],            # SQLi found → SQLMap confirmation
     "CWE-444": ["smuggler"],          # Smuggling indicators → deep smuggling test
     "CWE-524": ["cache-deception"],   # Cache issues → cache deception test
@@ -240,6 +241,8 @@ CWE_TRIGGERS: dict[str, list[str]] = {
     "CWE-208": ["timing-oracle"],     # Timing info leak → differential analysis
     "CWE-347": ["cdp-token-extractor"],  # JWT issues → live token capture
     "CWE-915": ["cdp-checkout-interceptor"],  # Mass assignment → checkout mutation
+    "CWE-1021": ["header-poc-generator"],  # Clickjacking → header PoC with iframe demo
+    "CWE-319":  ["header-poc-generator"],  # Cleartext HTTP → HSTS downgrade PoC
 }
 
 # Tools that produce endpoints for downstream injection

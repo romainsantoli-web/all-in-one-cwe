@@ -12,7 +12,7 @@ failed = 0
 errors: list[str] = []
 
 
-def test(name: str, condition: bool, detail: str = ""):
+def check(name: str, condition: bool, detail: str = ""):
     global passed, failed
     if condition:
         passed += 1
@@ -36,10 +36,10 @@ try:
         validate_finding,
         is_always_rejected,
     )
-    test("T1: validators module imports", True)
+    check("T1: validators module imports", True)
     _IMPORTS_OK = True
 except ImportError as e:
-    test("T1: validators module imports", False, str(e))
+    check("T1: validators module imports", False, str(e))
     _IMPORTS_OK = False
 
 
@@ -47,36 +47,36 @@ except ImportError as e:
 
 print("\n─── GateResult Tests ───")
 gr = GateResult("test_gate", "PASS", "looks good", confidence=0.9)
-test("T2: GateResult to_dict keys", set(gr.to_dict().keys()) >= {"gate", "verdict", "reason", "confidence"})
-test("T3: GateResult verdict is PASS", gr.verdict == "PASS")
+check("T2: GateResult to_dict keys", set(gr.to_dict().keys()) >= {"gate", "verdict", "reason", "confidence"})
+check("T3: GateResult verdict is PASS", gr.verdict == "PASS")
 gr_suggestion = GateResult("test", "WARN", "maybe", suggestion="fix it")
-test("T4: GateResult with suggestion", "suggestion" in gr_suggestion.to_dict())
+check("T4: GateResult with suggestion", "suggestion" in gr_suggestion.to_dict())
 
 
 # ── ALWAYS_REJECTED tests ────────────────────────────
 
 print("\n─── Always-Rejected List Tests ───")
-test("T5: ALWAYS_REJECTED has ≥10 entries", len(ALWAYS_REJECTED) >= 10)
-test("T6: Each entry has id/patterns/reason",
+check("T5: ALWAYS_REJECTED has ≥10 entries", len(ALWAYS_REJECTED) >= 10)
+check("T6: Each entry has id/patterns/reason",
      all("id" in r and "patterns" in r and "reason" in r for r in ALWAYS_REJECTED))
 
 
 # ── is_always_rejected tests ─────────────────────────
 
 print("\n─── is_always_rejected Tests ───")
-test("T7: Missing CSP rejected",
+check("T7: Missing CSP rejected",
      is_always_rejected("Missing Content-Security-Policy Header") is not None)
-test("T8: SSRF not rejected",
+check("T8: SSRF not rejected",
      is_always_rejected("Server-Side Request Forgery") is None)
-test("T9: Self-XSS rejected",
+check("T9: Self-XSS rejected",
      is_always_rejected("Self-XSS in profile page") is not None)
-test("T10: Missing HSTS rejected",
+check("T10: Missing HSTS rejected",
      is_always_rejected("Missing HSTS header") is not None)
-test("T11: SQL Injection not rejected",
+check("T11: SQL Injection not rejected",
      is_always_rejected("SQL Injection in login") is None)
-test("T12: GraphQL introspection rejected",
+check("T12: GraphQL introspection rejected",
      is_always_rejected("GraphQL Introspection Enabled") is not None)
-test("T13: CORS wildcard rejected",
+check("T13: CORS wildcard rejected",
      is_always_rejected("CORS Wildcard on API endpoint") is not None)
 
 
@@ -97,9 +97,9 @@ ssrf_finding = {
     "poc_url": "https://target.com/api/fetch?url=http://169.254.169.254/",
 }
 summary = validate_finding(ssrf_finding)
-test("T14: SSRF passes all gates", summary.overall_verdict == "PASS",
+check("T14: SSRF passes all gates", summary.overall_verdict == "PASS",
      f"got {summary.overall_verdict}, failed={summary.gates_failed}")
-test("T15: SSRF has 7 total gates", summary.total_gates == 7)
+check("T15: SSRF has 7 total gates", summary.total_gates == 7)
 
 # Missing CSP — should be REJECTED
 csp_finding = {
@@ -111,9 +111,9 @@ csp_finding = {
     "description": "The CSP header is not set on the response",
 }
 summary_csp = validate_finding(csp_finding)
-test("T16: Missing CSP is REJECTED", summary_csp.overall_verdict == "REJECTED",
+check("T16: Missing CSP is REJECTED", summary_csp.overall_verdict == "REJECTED",
      f"got {summary_csp.overall_verdict}")
-test("T17: CSP has rejected reasons", len(summary_csp.rejected_reasons) > 0)
+check("T17: CSP has rejected reasons", len(summary_csp.rejected_reasons) > 0)
 
 # Theoretical finding — should FAIL or WARN
 theoretical = {
@@ -125,7 +125,7 @@ theoretical = {
     "tool": "scanner",
 }
 summary_theo = validate_finding(theoretical)
-test("T18: Theoretical finding not PASS", summary_theo.overall_verdict != "PASS",
+check("T18: Theoretical finding not PASS", summary_theo.overall_verdict != "PASS",
      f"got {summary_theo.overall_verdict}")
 
 # Minimal finding — triager should reject
@@ -135,7 +135,7 @@ minimal = {
     "tool": "test",
 }
 summary_min = validate_finding(minimal)
-test("T19: Minimal finding fails triager test",
+check("T19: Minimal finding fails triager test",
      any(r.gate_name == "triager_test" and r.verdict == "FAIL" for r in summary_min.results))
 
 
@@ -147,13 +147,13 @@ validator = ScanValidator()
 
 # Preflight
 preflight = validator.preflight_check({"scope": {"targets": ["https://example.com"]}})
-test("T20: Preflight returns 3 results", len(preflight) == 3)
-test("T21: Scope valid passes",
+check("T20: Preflight returns 3 results", len(preflight) == 3)
+check("T21: Scope valid passes",
      any(r.gate_name == "scope_valid" and r.verdict == "PASS" for r in preflight))
 
 # Preflight without scope
 preflight_empty = validator.preflight_check({})
-test("T22: Preflight without scope fails scope_valid",
+check("T22: Preflight without scope fails scope_valid",
      any(r.gate_name == "scope_valid" and r.verdict == "FAIL" for r in preflight_empty))
 
 # validate_report
@@ -172,21 +172,21 @@ findings_batch = [
     },
 ]
 result = validator.validate_report(findings_batch)
-test("T23: validate_report has validated key", "validated" in result)
-test("T24: validate_report has rejected key", "rejected" in result)
-test("T25: CSP in rejected", len(result["rejected"]) >= 1)
-test("T26: SSRF in validated", len(result["validated"]) >= 1)
-test("T27: Stats has pass_rate", "pass_rate" in result["stats"])
-test("T28: Stats total count correct", result["stats"]["total"] == 3)
+check("T23: validate_report has validated key", "validated" in result)
+check("T24: validate_report has rejected key", "rejected" in result)
+check("T25: CSP in rejected", len(result["rejected"]) >= 1)
+check("T26: SSRF in validated", len(result["validated"]) >= 1)
+check("T27: Stats has pass_rate", "pass_rate" in result["stats"])
+check("T28: Stats total count correct", result["stats"]["total"] == 3)
 
 # Each validated finding has validation metadata
 for f in result["validated"]:
     has_val = "validation" in f
     if not has_val:
-        test("T29: Validated findings have validation metadata", False, f"missing on {f.get('title')}")
+        check("T29: Validated findings have validation metadata", False, f"missing on {f.get('title')}")
         break
 else:
-    test("T29: Validated findings have validation metadata", True)
+    check("T29: Validated findings have validation metadata", True)
 
 
 # ── ValidationSummary tests ──────────────────────────
@@ -200,7 +200,7 @@ vs.total_gates = 7
 vs.results = [GateResult("test", "PASS", "ok")]
 vs.rejected_reasons = ["test: reason"]
 d = vs.to_dict()
-test("T30: ValidationSummary.to_dict has all keys",
+check("T30: ValidationSummary.to_dict has all keys",
      set(d.keys()) >= {"gates_passed", "gates_failed", "total_gates", "overall_verdict", "results"})
 
 
@@ -212,10 +212,10 @@ print("\n─── Gate-Specific Tests ───")
 from validators import _gate_exploitability, _gate_not_rejected, _gate_triager_test
 
 poc_finding = {"title": "SSRF", "poc_url": "http://...", "description": "SSRF found"}
-test("T31: Exploitability PASS with PoC", _gate_exploitability(poc_finding).verdict == "PASS")
+check("T31: Exploitability PASS with PoC", _gate_exploitability(poc_finding).verdict == "PASS")
 
 no_poc = {"title": "SSRF", "description": "Possible SSRF, not verified"}
-test("T32: Exploitability FAIL without PoC + theoretical",
+check("T32: Exploitability FAIL without PoC + theoretical",
      _gate_exploitability(no_poc).verdict == "FAIL")
 
 # Not-rejected with chains (should pass even if pattern matches)
@@ -224,7 +224,7 @@ chained_csp = {
     "description": "CSP not set",
     "chains": [{"id": "xss-csp"}],
 }
-test("T33: Chained rejected finding passes",
+check("T33: Chained rejected finding passes",
      _gate_not_rejected(chained_csp).verdict == "PASS")
 
 # Triager test scoring
@@ -237,7 +237,7 @@ good_finding = {
     "evidence": {"request": "POST /login username=admin'--"},
     "remediation": "Use parameterized SQL queries",
 }
-test("T34: Good finding passes triager test",
+check("T34: Good finding passes triager test",
      _gate_triager_test(good_finding).verdict == "PASS")
 
 
@@ -250,31 +250,31 @@ import importlib
 smart_spec = importlib.util.find_spec("smart_scan", [str(Path(__file__).parent.parent / "scripts")])
 if smart_spec and smart_spec.origin:
     source = Path(smart_spec.origin).read_text()
-    test("T35: smart_scan imports ScanValidator",
+    check("T35: smart_scan imports ScanValidator",
          "from validators import ScanValidator" in source)
-    test("T36: smart_scan has preflight_check",
+    check("T36: smart_scan has preflight_check",
          "preflight_check" in source)
-    test("T37: smart_scan has validation_gates step",
+    check("T37: smart_scan has validation_gates step",
          "validation_gates" in source or "validate_report" in source)
-    test("T38: smart_scan exports rejected findings",
+    check("T38: smart_scan exports rejected findings",
          "rejected-findings.json" in source)
 else:
-    test("T35: smart_scan imports ScanValidator", False, "module not found")
-    test("T36: smart_scan has preflight_check", False, "module not found")
-    test("T37: smart_scan has validation_gates step", False, "module not found")
-    test("T38: smart_scan exports rejected findings", False, "module not found")
+    check("T35: smart_scan imports ScanValidator", False, "module not found")
+    check("T36: smart_scan has preflight_check", False, "module not found")
+    check("T37: smart_scan has validation_gates step", False, "module not found")
+    check("T38: smart_scan exports rejected findings", False, "module not found")
 
 # merge-reports.py imports validators
 merge_path = Path(__file__).parent.parent / "scripts" / "merge-reports.py"
 if merge_path.exists():
     merge_src = merge_path.read_text()
-    test("T39: merge-reports imports ScanValidator",
+    check("T39: merge-reports imports ScanValidator",
          "from validators import ScanValidator" in merge_src)
-    test("T40: merge-reports calls finding_quality_gate",
+    check("T40: merge-reports calls finding_quality_gate",
          "finding_quality_gate" in merge_src)
 else:
-    test("T39: merge-reports imports ScanValidator", False, "file not found")
-    test("T40: merge-reports calls finding_quality_gate", False, "file not found")
+    check("T39: merge-reports imports ScanValidator", False, "file not found")
+    check("T40: merge-reports calls finding_quality_gate", False, "file not found")
 
 
 # ── Duplicate gate with memory mock ──────────────────
@@ -285,12 +285,12 @@ from validators import _gate_not_duplicate
 
 # Finding marked as duplicate
 dup_finding = {"title": "XSS", "duplicate_of": "finding-123"}
-test("T41: Duplicate finding detected",
+check("T41: Duplicate finding detected",
      _gate_not_duplicate(dup_finding).verdict == "FAIL")
 
 # Finding not duplicate
 clean_finding = {"title": "XSS", "url": "https://example.com"}
-test("T42: Non-duplicate passes",
+check("T42: Non-duplicate passes",
      _gate_not_duplicate(clean_finding).verdict == "PASS")
 
 

@@ -9,7 +9,7 @@ Comprehensive secret/token leakage detection combining:
   5. Common secret-bearing endpoint probing (/env, /debug, /config, etc.)
 
 Source: db_deep_probe.js (API key discovery) + db_phase14b_apidiscovery.js
-        (JS bundle secrets) from Doctolib bug bounty campaign — both found
+        (JS bundle secrets) from real bug bounty campaign — both found
         exposed API keys on production.
 
 Usage:

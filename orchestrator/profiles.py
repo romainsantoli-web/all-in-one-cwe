@@ -54,6 +54,7 @@ MEDIUM_TOOLS: list[str] = LIGHT_TOOLS + [
     "ssrf-scanner",
     "websocket-scanner",
     "cache-deception",
+    "header-poc-generator",
 ]
 
 # Full: all tools (no --only filter)

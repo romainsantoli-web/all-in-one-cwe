@@ -228,8 +228,50 @@ export default function JobDetailPage() {
                                     </div>
                                     <p className="text-xs font-medium mb-1">{f.name}</p>
                                     <p className="text-xs text-[var(--text-muted)] mb-1">{f.description}</p>
+                                    {f.evidence && typeof f.evidence === "object" && Object.keys(f.evidence).length > 0 && (
+                                      <div className="mt-2">
+                                        <span className="text-[10px] font-semibold text-[var(--text-dim)] uppercase">Evidence</span>
+                                        {Array.isArray(f.evidence.secrets) && f.evidence.secrets.length > 0 && (
+                                          <div className="mt-1 space-y-1">
+                                            {(f.evidence.secrets as Array<{type?: string; source?: string; redacted?: string}>).map((s, si) => (
+                                              <div key={si} className="bg-black/30 rounded px-2 py-1 text-[10px] font-mono">
+                                                <span className="text-red-400">{s.type}</span>
+                                                {s.source && <span className="text-[var(--text-dim)] ml-2 break-all">in {s.source}</span>}
+                                                {s.redacted && <span className="text-yellow-400 ml-2">{s.redacted}</span>}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {Array.isArray(f.evidence.endpoints) && f.evidence.endpoints.length > 0 && (
+                                          <div className="mt-1 space-y-0.5">
+                                            {(f.evidence.endpoints as Array<{path?: string; status?: number; reason?: string}>).map((ep, ei) => (
+                                              <div key={ei} className="text-[10px] font-mono text-[var(--text-muted)]">
+                                                <span className="text-yellow-400">{ep.path}</span>
+                                                {ep.status != null && <span className="ml-1 text-red-400">[{ep.status}]</span>}
+                                                {ep.reason && <span className="ml-1">{ep.reason}</span>}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {!Array.isArray(f.evidence.secrets) && !Array.isArray(f.evidence.endpoints) && (
+                                          <pre className="mt-1 text-[10px] font-mono bg-black/30 rounded p-2 overflow-x-auto whitespace-pre-wrap max-h-32">
+                                            {JSON.stringify(f.evidence, null, 2)}
+                                          </pre>
+                                        )}
+                                      </div>
+                                    )}
+                                    {f.impact && (
+                                      <p className="text-[10px] text-[var(--text-dim)] mt-1">
+                                        <span className="font-semibold">Impact:</span> {f.impact}
+                                      </p>
+                                    )}
+                                    {f.steps && f.steps.length > 0 && (
+                                      <ol className="text-[10px] text-[var(--text-dim)] mt-1 list-decimal list-inside space-y-0.5">
+                                        {f.steps.map((s: string, j: number) => <li key={j}>{s}</li>)}
+                                      </ol>
+                                    )}
                                     {f.remediation && (
-                                      <p className="text-xs text-green-400/80">
+                                      <p className="text-xs text-green-400/80 mt-1">
                                         <span className="font-semibold">Fix: </span>{f.remediation}
                                       </p>
                                     )}

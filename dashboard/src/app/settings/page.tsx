@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import CopilotAuthButton from "@/components/CopilotAuthButton";
 
 interface ProviderInfo {
   name: string;
@@ -179,6 +180,7 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
+              {p.envVar === "COPILOT_JWT" && <CopilotAuthButton />}
             </div>
           ))}
         </div>

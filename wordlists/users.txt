@@ -1,0 +1,10 @@
+admin
+test
+root
+user
+guest
+operator
+info
+web
+api
+service

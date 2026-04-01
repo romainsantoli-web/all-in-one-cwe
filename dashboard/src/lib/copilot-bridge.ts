@@ -52,7 +52,7 @@ let tokenCache: CachedToken | null = null;
  */
 export async function getGitHubToken(): Promise<string | null> {
   const saved = await getProviderSettings();
-  return saved["COPILOT_JWT"] || process.env.COPILOT_JWT || null;
+  return saved["COPILOT_OAUTH_TOKEN"] || saved["COPILOT_JWT"] || process.env.COPILOT_OAUTH_TOKEN || process.env.COPILOT_JWT || null;
 }
 
 /**

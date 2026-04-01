@@ -53,9 +53,9 @@ auth_header_names:
 
 # Target-specific overrides (uncomment and edit)
 # target_overrides:
-#   doctolib.fr:
+#   example.com:
 #     extra_cookie_names:
-#       - "_doctolib_session"
+#       - "_target_session"
 #       - "ssid"
 #       - "esid"
 #     csrf_meta_name: "csrf-token"

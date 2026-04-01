@@ -13,8 +13,11 @@ const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 export interface LLMRequest {
   provider: string;
   messages: Array<{ role: string; content: string }>;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
+  agentic?: boolean;
+  conversationId?: string;
 }
 
 /**
@@ -27,16 +30,19 @@ export function callLLM(req: LLMRequest): ReadableStream<Uint8Array> {
   return new ReadableStream({
     async start(controller) {
       const script = join(PROJECT_ROOT, "llm", "cli.py");
+      const cliArgs = req.agentic ? [script, "--agent"] : [script];
       const input = JSON.stringify({
         provider: req.provider,
         messages: req.messages,
-        temperature: req.temperature ?? 0.7,
+        model: req.model || undefined,
+        temperature: req.temperature ?? (req.agentic ? 0.4 : 0.7),
         max_tokens: req.maxTokens ?? 4096,
+        conversation_id: req.conversationId || undefined,
       });
 
       const env = await getEnvWithSettings();
 
-      const child = spawn("python3", [script], {
+      const child = spawn("python3", cliArgs, {
         cwd: PROJECT_ROOT,
         env,
         stdio: ["pipe", "pipe", "pipe"],

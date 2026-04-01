@@ -1,0 +1,39 @@
+{
+  "name": "metamask-recovery-v4",
+  "version": "4.0.0",
+  "description": "Universal encrypted file password recovery — V4 supports 23+ formats (wallets, archives, documents, disk encryption)",
+  "private": true,
+  "workspaces": [
+    "packages/crackers",
+    "packages/core",
+    "packages/intelligence",
+    "packages/cli",
+    "packages/extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:cli": "npm run build -w packages/cli",
+    "build:ext": "npm run build -w packages/extension",
+    "test": "npm run test --workspaces",
+    "lint": "eslint packages/*/src/**/*.ts"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romain/metamask-recovery"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "bcrypt-pbkdf": "^1.0.2",
+    "js-sha3": "^0.9.3"
+  }
+}

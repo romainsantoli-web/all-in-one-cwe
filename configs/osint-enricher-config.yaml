@@ -1,0 +1,20 @@
+# OSINT Enricher Configuration
+# ==============================
+
+expected_ports: [80, 443, 8080, 8443]
+
+# Shodan API key (prefer env SHODAN_API_KEY):
+# shodan_api_key: YOUR_KEY_HERE
+
+# Technologies to lookup in SearchSploit
+# (auto-detected from whatweb if empty):
+# tech_stack:
+#   - Apache 2.4
+#   - nginx 1.24
+#   - PHP 8.2
+#   - WordPress 6.4
+
+# Recon-ng resource file commands:
+# recon_ng_commands:
+#   - "marketplace install recon/domains-hosts/hackertarget"
+#   - "modules load recon/domains-hosts/hackertarget"

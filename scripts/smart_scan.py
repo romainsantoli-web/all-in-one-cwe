@@ -57,7 +57,8 @@ PROFILES = {
         "feroxbuster", "arjun", "nikto", "corscanner", "log4j-scan",
         "trufflehog", "user-enum", "redirect-cors", "oidc-audit",
         "bypass-403-advanced", "ssrf-scanner", "websocket-scanner",
-        "cache-deception",
+        "cache-deception", "brute-forcer", "commix", "wapiti",
+        "osint-enricher",
     ],
     "full": None,  # None = all tools
 }

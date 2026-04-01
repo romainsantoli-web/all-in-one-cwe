@@ -100,10 +100,10 @@ scan-light: ## Light scan — 15 essential tools, fast (~10 min)
 		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT) \
 		--only nuclei,zap-baseline,testssl,sqlmap,semgrep,gitleaks,trivy,idor-scanner,auth-bypass,secret-leak,api-discovery,xss-scanner,httpx,whatweb,wafw00f
 
-scan-medium: ## Medium scan — ~30 tools, balanced coverage (~30 min)
+scan-medium: ## Medium scan — ~40 tools, balanced coverage (~30 min)
 	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \
 		--code $(CODE) --repo $(REPO) --rate-limit $(RATE_LIMIT) \
-		--only nuclei,zap-baseline,testssl,sqlmap,semgrep,gitleaks,trivy,idor-scanner,auth-bypass,secret-leak,api-discovery,xss-scanner,httpx,whatweb,wafw00f,subfinder,katana,amass,dnsx,gowitness,sstimap,crlfuzz,ffuf,feroxbuster,arjun,nikto,corscanner,log4j-scan,trufflehog,user-enum,redirect-cors,oidc-audit,bypass-403-advanced,ssrf-scanner,websocket-scanner,cache-deception
+		--only nuclei,zap-baseline,testssl,sqlmap,semgrep,gitleaks,trivy,idor-scanner,auth-bypass,secret-leak,api-discovery,xss-scanner,httpx,whatweb,wafw00f,subfinder,katana,amass,dnsx,gowitness,sstimap,crlfuzz,ffuf,feroxbuster,arjun,nikto,corscanner,log4j-scan,trufflehog,user-enum,redirect-cors,oidc-audit,bypass-403-advanced,ssrf-scanner,websocket-scanner,cache-deception,brute-forcer,commix,wapiti,osint-enricher
 
 scan-full: ## Full scan — all tools, thorough (~60+ min)
 	python -m orchestrator.flows.scan_flow --target $(TARGET) --domain $(DOMAIN) \

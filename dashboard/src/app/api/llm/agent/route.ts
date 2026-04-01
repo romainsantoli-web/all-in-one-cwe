@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { callLLMSync } from "@/lib/llm-bridge";
 import { TOOL_META, LLM_PROVIDERS } from "@/lib/tools-data";
+import { getProviderSettings } from "@/lib/settings";
 import { listJobs } from "@/lib/jobs";
 import { readFile, stat } from "fs/promises";
 import { spawn } from "child_process";
@@ -16,9 +17,10 @@ const MAX_STEPS = 10;
 const MAX_GOAL_LEN = 2000;
 const MAX_TARGET_LEN = 2048;
 
-function getDefaultProvider(): string | null {
+async function getDefaultProvider(): Promise<string | null> {
+  const saved = await getProviderSettings();
   for (const p of LLM_PROVIDERS) {
-    if (process.env[p.envVar]) return p.name;
+    if (saved[p.envVar] || process.env[p.envVar]) return p.name;
   }
   return null;
 }
@@ -244,7 +246,7 @@ export async function POST(request: Request) {
 
   const provider = typeof body.provider === "string" && PROVIDER_NAMES.has(body.provider)
     ? body.provider
-    : getDefaultProvider();
+    : await getDefaultProvider();
   if (!provider) {
     return NextResponse.json({ error: "No LLM provider available" }, { status: 503 });
   }

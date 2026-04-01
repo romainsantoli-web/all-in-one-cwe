@@ -21,6 +21,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal
@@ -92,16 +93,19 @@ ALWAYS_REJECTED: list[dict[str, str | list[str]]] = [
         "id": "missing-csp-header",
         "patterns": ["missing.*content.security.policy", "csp.*not.*set", "no.*csp"],
         "reason": "Missing CSP alone is informational — chain with XSS to report",
+        "pass_if": ["poc_html", "chain", "xss"],
     },
     {
         "id": "missing-hsts-header",
         "patterns": ["missing.*hsts", "strict.transport.security.*not", "no.*hsts"],
         "reason": "Missing HSTS alone is informational — chain with MITM PoC",
+        "pass_if": ["poc_html", "chain", "sslstrip", "mitm"],
     },
     {
         "id": "missing-x-frame-options",
         "patterns": ["missing.*x.frame", "x.frame.options.*not", "clickjacking.*missing"],
         "reason": "Missing X-Frame-Options alone — chain with clickjacking PoC on sensitive action",
+        "pass_if": ["poc_html", "chain", "clickjacking"],
     },
     {
         "id": "graphql-introspection",
@@ -156,10 +160,11 @@ ALWAYS_REJECTED: list[dict[str, str | list[str]]] = [
 ]
 
 # Compile reject patterns once
-_REJECT_COMPILED: list[tuple[str, list[re.Pattern[str]], str]] = []
+_REJECT_COMPILED: list[tuple[str, list[re.Pattern[str]], str, list[str]]] = []
 for _rule in ALWAYS_REJECTED:
     _patterns = [re.compile(p, re.IGNORECASE) for p in _rule["patterns"]]  # type: ignore[union-attr]
-    _REJECT_COMPILED.append((_rule["id"], _patterns, _rule["reason"]))  # type: ignore[arg-type]
+    _pass_if = _rule.get("pass_if", [])  # type: ignore[union-attr]
+    _REJECT_COMPILED.append((_rule["id"], _patterns, _rule["reason"], _pass_if))  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +241,10 @@ def _gate_exploitability(finding: dict, _ctx: dict | None = None) -> GateResult:
 def _gate_real_impact(finding: dict, _ctx: dict | None = None) -> GateResult:
     """Gate 2: Does this affect a real user without special/unlikely action?"""
     sev = (finding.get("severity") or "info").lower()
-    cwe = (finding.get("cwe") or finding.get("cwe_id") or finding.get("cwe_normalized") or "").upper()
+    cwe_raw = finding.get("cwe") or finding.get("cwe_id") or finding.get("cwe_normalized") or ""
+    if isinstance(cwe_raw, list):
+        cwe_raw = cwe_raw[0] if cwe_raw else ""
+    cwe = str(cwe_raw).upper()
 
     if sev in ("critical", "high") and cwe in HIGH_IMPACT_CWES:
         return GateResult("real_impact", "PASS", f"High severity {cwe} — real user impact")
@@ -263,7 +271,7 @@ def _gate_concrete_impact(finding: dict, _ctx: dict | None = None) -> GateResult
     title = (finding.get("title") or finding.get("name") or "").lower()
     desc = (finding.get("description") or "").lower()
     text = f"{title} {desc}"
-    cwe = (finding.get("cwe") or finding.get("cwe_id") or "").upper()
+    cwe = get_cwe(finding)
 
     # Concrete impact keywords
     concrete = [
@@ -350,8 +358,10 @@ def _gate_not_rejected(finding: dict, _ctx: dict | None = None) -> GateResult:
     title = (finding.get("title") or finding.get("name") or "").lower()
     desc = (finding.get("description") or "").lower()
     text = f"{title} {desc}"
+    evidence = finding.get("evidence", {})
+    evidence_str = json.dumps(evidence).lower() if isinstance(evidence, dict) else str(evidence).lower()
 
-    for rule_id, patterns, reason in _REJECT_COMPILED:
+    for rule_id, patterns, reason, pass_if in _REJECT_COMPILED:
         for pat in patterns:
             if pat.search(text):
                 # Check if it's chained (chains make rejected findings valid)
@@ -360,6 +370,13 @@ def _gate_not_rejected(finding: dict, _ctx: dict | None = None) -> GateResult:
                     return GateResult("not_rejected", "PASS",
                                       f"Matched reject pattern '{rule_id}' but has chain — valid",
                                       confidence=0.8)
+                # Check if evidence contains PoC artifacts (pass_if keywords)
+                if pass_if:
+                    full_text = f"{text} {evidence_str}"
+                    if any(kw in full_text for kw in pass_if):
+                        return GateResult("not_rejected", "PASS",
+                                          f"Matched reject pattern '{rule_id}' but PoC evidence present — valid",
+                                          confidence=0.85)
                 return GateResult("not_rejected", "FAIL", reason,
                                   suggestion=f"Chain with another vuln or remove ({rule_id})")
     return GateResult("not_rejected", "PASS", "Not in rejected list")
@@ -399,7 +416,7 @@ def _gate_triager_test(finding: dict, _ctx: dict | None = None) -> GateResult:
         issues.append("missing severity")
 
     # Has CWE?
-    cwe = finding.get("cwe") or finding.get("cwe_id") or ""
+    cwe = get_cwe(finding)
     if cwe:
         score += 1
     else:
@@ -601,11 +618,26 @@ def validate_finding(finding: dict, **kwargs: Any) -> ValidationSummary:
     return validator.finding_quality_gate(finding)
 
 
-def is_always_rejected(title: str, description: str = "") -> str | None:
-    """Check if a finding matches the always-rejected list. Returns reason or None."""
+def is_always_rejected(title: str, description: str = "", evidence: dict | None = None) -> str | None:
+    """Check if a finding matches the always-rejected list. Returns reason or None.
+
+    Findings with PoC evidence (poc_html, chain keywords) bypass rejection.
+    """
     text = f"{title} {description}".lower()
-    for rule_id, patterns, reason in _REJECT_COMPILED:
+    evidence_str = json.dumps(evidence).lower() if isinstance(evidence, dict) else ""
+    for rule_id, patterns, reason, pass_if in _REJECT_COMPILED:
         for pat in patterns:
             if pat.search(text):
+                # If pass_if keywords found in evidence, don't reject
+                if pass_if:
+                    full_text = f"{text} {evidence_str}"
+                    if any(kw in full_text for kw in pass_if):
+                        return None
                 return reason
     return None
+
+def get_cwe(finding):
+    cwe = finding.get("cwe") or finding.get("cwe_id") or finding.get("cwe_normalized") or ""
+    if isinstance(cwe, list):
+        cwe = cwe[0] if cwe else ""
+    return str(cwe).upper()

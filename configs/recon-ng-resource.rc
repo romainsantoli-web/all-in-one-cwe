@@ -1,0 +1,18 @@
+# Recon-ng resource commands
+# Run these modules on the target domain
+
+workspaces create bb-scan
+db insert domains ${DOMAIN:-example.com}
+marketplace install recon/domains-hosts/hackertarget
+modules load recon/domains-hosts/hackertarget
+run
+
+marketplace install recon/hosts-ports/shodan_ip
+modules load recon/hosts-ports/shodan_ip
+run
+
+marketplace install recon/domains-contacts/whois_pocs
+modules load recon/domains-contacts/whois_pocs
+run
+
+show hosts

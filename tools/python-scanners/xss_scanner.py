@@ -8,7 +8,7 @@ Comprehensive XSS testing combining:
   4. CSP header analysis — missing/weak directives
   5. DOM-based via parameter reflection detection
 
-Source: doctolib_xss_scan.py from Doctolib bug bounty campaign.
+Source: xss_scan.py from real bug bounty campaign.
 
 Usage:
     python xss_scanner.py --target https://example.com --dry-run

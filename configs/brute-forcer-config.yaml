@@ -1,0 +1,55 @@
+# Brute-Force Scanner Configuration
+# ===================================
+
+login_endpoints:
+  - /login
+  - /api/auth/login
+  - /api/session
+
+credentials:
+  - ["admin", "admin"]
+  - ["admin", "password"]
+  - ["test", "test"]
+  - ["root", "root"]
+  - ["demo", "demo"]
+
+# Customize sections below as needed.
+
+# Additional login endpoints:
+# login_endpoints:
+#   - /api/auth/login
+#   - /api/session
+
+# Signup endpoints for weak password testing:
+# signup_endpoints:
+#   - /register
+#   - /api/register
+
+# Form field names:
+# username_field: email
+# password_field: password
+# email_field: email
+
+# Success indicators in response body:
+# success_indicators:
+#   - token
+#   - access_token
+#   - dashboard
+
+# Failure indicators in response body:
+# failure_indicators:
+#   - invalid
+#   - incorrect
+#   - unauthorized
+
+# Custom credential pairs to test:
+# credentials:
+#   - ["admin", "admin"]
+#   - ["admin", "password"]
+#   - ["test", "test123"]
+
+# Number of rapid attempts for rate limit test:
+# rate_limit_test_attempts: 15
+
+# Weak passwords to test against signup:
+# weak_passwords: ["a", "12", "abc", "1234"]

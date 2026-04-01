@@ -38,6 +38,15 @@ from llm.base import (
 logger = logging.getLogger(__name__)
 
 
+# Headers mimicking VS Code Copilot extension — must match exactly
+# (same as Compta's working implementation)
+COPILOT_HEADERS = {
+    "Editor-Version": "vscode/1.95.0",
+    "Editor-Plugin-Version": "copilot-chat/0.23.2",
+    "User-Agent": "GitHubCopilotChat/0.23.2",
+}
+
+
 class CopilotProProvider(LLMProvider):
     """GitHub Copilot Pro provider — full catalog (Claude, GPT-5, Gemini, Grok)."""
 
@@ -45,83 +54,179 @@ class CopilotProProvider(LLMProvider):
 
     _CLIENT_ID = "Iv1.b507a08c87ecfe98"
     _BASE_URL = "https://api.githubcopilot.com"
+    _SESSION_TOKEN_URL = "https://api.github.com/copilot_internal/v2/token"
+    _TOKEN_FILE = "/tmp/copilot_token.json"
 
     def __init__(self, model: str | None = None, api_key: str | None = None, **kwargs: Any):
         self._oauth_token: str | None = kwargs.pop("oauth_token", None)
-        self._jwt_expires: int = 0
-        jwt = api_key or os.environ.get("COPILOT_JWT")
 
-        if not jwt and not self._oauth_token:
-            jwt, self._oauth_token, self._jwt_expires = self._load_cached_tokens()
+        # Priority: explicit oauth_token kwarg > COPILOT_OAUTH_TOKEN env > COPILOT_JWT env > cached file
+        if not self._oauth_token:
+            self._oauth_token = os.environ.get("COPILOT_OAUTH_TOKEN")
 
-        if not jwt and self._oauth_token:
-            jwt = self._refresh_jwt()
+        raw_key = api_key or os.environ.get("COPILOT_JWT")
+        # If the value looks like a GitHub PAT/OAuth token, treat it as OAuth token
+        if raw_key and raw_key.startswith(("ghp_", "gho_", "github_pat_", "ghu_")):
+            logger.info("COPILOT_JWT looks like a PAT/OAuth token — will use for session exchange")
+            self._oauth_token = self._oauth_token or raw_key
+            raw_key = None
 
-        if not jwt:
+        if not self._oauth_token:
+            _, self._oauth_token, _ = self._load_cached_tokens()
+
+        # With an OAuth token, get a fresh session token (like Compta does)
+        if self._oauth_token:
+            jwt = self._get_session_token(self._oauth_token)
+            if not jwt:
+                raise ValueError(
+                    "Copilot session token exchange failed. "
+                    "Your OAuth token may be invalid. Re-authenticate via device flow."
+                )
+        elif raw_key:
+            # Treat as a direct session JWT (rare — usually from manual override)
+            jwt = raw_key
+        else:
             raise ValueError(
-                "CopilotProProvider requires a Copilot JWT or OAuth token. "
-                "Run the device flow first or set COPILOT_JWT env var."
+                "CopilotProProvider requires authentication. "
+                "Use the OAuth device flow on the /llm page or set COPILOT_OAUTH_TOKEN."
             )
 
         super().__init__(model=model, api_key=jwt, **kwargs)
         self._jwt = jwt
+
+    # ── OAuth Device Flow ───────────────────────────────────────────────────
+
+    @classmethod
+    def start_device_flow(cls) -> dict[str, str]:
+        """Start GitHub OAuth device flow. Returns user_code, verification_uri, device_code."""
+        import httpx as _httpx
+
+        r = _httpx.post(
+            "https://github.com/login/device/code",
+            headers={"Accept": "application/json", **COPILOT_HEADERS},
+            data={"client_id": cls._CLIENT_ID, "scope": "copilot"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return {
+            "user_code": data["user_code"],
+            "verification_uri": data["verification_uri"],
+            "device_code": data["device_code"],
+            "expires_in": data.get("expires_in", 900),
+            "interval": data.get("interval", 5),
+        }
+
+    @classmethod
+    def poll_device_flow(cls, device_code: str) -> dict[str, Any]:
+        """Poll for OAuth token. Returns {status, oauth_token?, error?}."""
+        import httpx as _httpx
+
+        r = _httpx.post(
+            "https://github.com/login/oauth/access_token",
+            headers={"Accept": "application/json", **COPILOT_HEADERS},
+            data={
+                "client_id": cls._CLIENT_ID,
+                "device_code": device_code,
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            },
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        if "access_token" in data:
+            oauth_token = data["access_token"]
+            # Verify token works by getting a session token
+            session = cls._get_session_token(oauth_token)
+            if session:
+                # Persist OAuth token (long-lived) — session tokens are fetched fresh per call
+                with open(cls._TOKEN_FILE, "w") as f:
+                    json.dump({"oauth_token": oauth_token}, f)
+                return {"status": "ok", "oauth_token": oauth_token}
+            return {"status": "error", "error": "Got OAuth token but session exchange failed"}
+
+        error = data.get("error", "unknown")
+        if error == "authorization_pending":
+            return {"status": "pending"}
+        if error == "slow_down":
+            return {"status": "slow_down"}
+        if error == "expired_token":
+            return {"status": "expired"}
+        return {"status": "error", "error": data.get("error_description", error)}
+
+    @classmethod
+    def _get_session_token(cls, oauth_token: str) -> str | None:
+        """Exchange GitHub OAuth token for a Copilot session token.
+
+        This is called fresh on every API call — same pattern as Compta.
+        The session token expires every ~30 min.
+        """
+        import httpx as _httpx
+
+        headers = {
+            "Authorization": f"token {oauth_token}",
+            "Accept": "application/json",
+            **COPILOT_HEADERS,
+        }
+        try:
+            r = _httpx.get(
+                cls._SESSION_TOKEN_URL,
+                headers=headers,
+                timeout=15,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                return data.get("token")
+            logger.warning(
+                "Copilot session token exchange failed: %d %s",
+                r.status_code, r.text[:200],
+            )
+        except Exception as e:
+            logger.error("Session token exchange error: %s", e)
+        return None
+
+    @classmethod
+    def get_auth_status(cls) -> dict[str, Any]:
+        """Check current auth status: try to get a session token from stored OAuth token."""
+        # Check env first
+        oauth = os.environ.get("COPILOT_OAUTH_TOKEN")
+        if not oauth:
+            _, oauth, _ = cls._load_cached_tokens()
+        if not oauth:
+            return {"authenticated": False, "has_oauth": False}
+        # Verify OAuth token still works
+        session = cls._get_session_token(oauth)
+        if session:
+            return {"authenticated": True, "has_oauth": True}
+        return {"authenticated": False, "has_oauth": True, "expired": True}
 
     def _default_model(self) -> str:
         return "claude-sonnet-4.6"
 
     # ── Token management ────────────────────────────────────────────────────
 
-    @staticmethod
-    def _load_cached_tokens() -> tuple[str | None, str | None, int]:
-        """Load cached tokens from /tmp/copilot_token.json."""
+    @classmethod
+    def _load_cached_tokens(cls) -> tuple[str | None, str | None, int]:
+        """Load cached OAuth token from /tmp/copilot_token.json."""
         try:
-            with open("/tmp/copilot_token.json") as f:
+            with open(cls._TOKEN_FILE) as f:
                 data = json.load(f)
-            jwt = data.get("copilot_jwt")
             oauth = data.get("oauth_token")
-            exp = int(data.get("expires_at", 0))
-            if jwt and exp > int(time.time()) + 60:
-                return jwt, oauth, exp
             return None, oauth, 0
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             return None, None, 0
 
-    def _refresh_jwt(self) -> str | None:
-        """Refresh Copilot JWT using cached OAuth token."""
-        import httpx as _httpx
-
+    def _refresh_session(self) -> str | None:
+        """Get a fresh session token using the stored OAuth token."""
         if not self._oauth_token:
             return None
-        try:
-            r = _httpx.get(
-                "https://api.github.com/copilot_internal/v2/token",
-                headers={
-                    "Authorization": f"token {self._oauth_token}",
-                    "Accept": "application/json",
-                    "Editor-Version": "vscode/1.96.0",
-                    "Editor-Plugin-Version": "copilot-chat/0.24.0",
-                },
-                timeout=10,
-            )
-            if r.status_code == 200:
-                data = r.json()
-                jwt = data.get("token")
-                self._jwt_expires = int(data.get("expires_at", 0))
-                with open("/tmp/copilot_token.json", "w") as f:
-                    json.dump({
-                        "oauth_token": self._oauth_token,
-                        "copilot_jwt": jwt,
-                        "expires_at": self._jwt_expires,
-                    }, f)
-                return jwt
-        except Exception:
-            pass
-        return None
+        return self._get_session_token(self._oauth_token)
 
     def _ensure_valid_jwt(self):
-        """Auto-refresh JWT if about to expire."""
-        if self._jwt_expires and int(time.time()) > self._jwt_expires - 60:
-            new_jwt = self._refresh_jwt()
+        """Get a fresh session token before every call (like Compta)."""
+        if self._oauth_token:
+            new_jwt = self._refresh_session()
             if new_jwt:
                 self._jwt = new_jwt
 
@@ -141,13 +246,14 @@ class CopilotProProvider(LLMProvider):
         return any(self.model.startswith(p) for p in self._RESPONSES_MODELS)
 
     def _copilot_headers(self) -> dict[str, str]:
+        """Build headers for Copilot API calls — matches Compta's get_copilot_api_headers()."""
         return {
             "Authorization": f"Bearer {self._jwt}",
             "Content-Type": "application/json",
-            "Editor-Version": "vscode/1.96.0",
-            "Editor-Plugin-Version": "copilot-chat/0.24.0",
+            "Accept": "application/json",
             "Copilot-Integration-Id": "vscode-chat",
             "Openai-Intent": "conversation-panel",
+            **COPILOT_HEADERS,
         }
 
     # ── Message/tool conversion ─────────────────────────────────────────────

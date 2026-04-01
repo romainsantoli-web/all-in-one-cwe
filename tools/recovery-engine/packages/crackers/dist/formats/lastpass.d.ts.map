@@ -1,0 +1,1 @@
+{"version":3,"file":"lastpass.d.ts","sourceRoot":"","sources":["../../src/formats/lastpass.ts"],"names":[],"mappings":"AAOA,OAAO,KAAK,EAAE,aAAa,EAAE,aAAa,EAAc,MAAM,aAAa,CAAC;AAE5E,MAAM,WAAW,cAAe,SAAQ,aAAa;IACnD,IAAI,EAAE,UAAU,CAAC;IACjB,UAAU,EAAE,MAAM,CAAC;IACnB,IAAI,EAAE,MAAM,CAAC;IACb,cAAc,EAAE,MAAM,CAAC;IACvB,QAAQ,EAAE,OAAO,CAAC;CACnB;AAED,eAAO,MAAM,eAAe,EAAE,aAsG7B,CAAC"}

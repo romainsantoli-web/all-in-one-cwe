@@ -1,0 +1,1 @@
+{"version":3,"file":"metamask.d.ts","sourceRoot":"","sources":["../../src/formats/metamask.ts"],"names":[],"mappings":"AAOA,OAAO,KAAK,EAAE,aAAa,EAAE,aAAa,EAAc,MAAM,aAAa,CAAC;AAE5E,MAAM,WAAW,cAAe,SAAQ,aAAa;IACnD,IAAI,EAAE,UAAU,CAAC;IACjB,IAAI,EAAE,MAAM,CAAC;IACb,EAAE,EAAE,MAAM,CAAC;IACX,IAAI,EAAE,MAAM,CAAC;IACb,UAAU,EAAE,MAAM,CAAC;CACpB;AAID,eAAO,MAAM,eAAe,EAAE,aA+C7B,CAAC"}

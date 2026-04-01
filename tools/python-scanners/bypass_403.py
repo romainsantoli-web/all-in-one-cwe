@@ -9,7 +9,7 @@ Comprehensive 403 bypass testing combining:
   - /v2/ path enumeration for undocumented API versions
   - JSON-RPC method enumeration on discovered endpoints
 
-Sources: rpc_bypass.py + rpc_bypass_v2.py from Doctolib bug bounty campaign.
+Sources: rpc_bypass.py + rpc_bypass_v2.py from real bug bounty campaign.
 
 Usage:
     python bypass_403.py --target https://example.com --dry-run

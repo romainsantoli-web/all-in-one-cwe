@@ -98,7 +98,8 @@ export async function POST(request: Request) {
     "--job-id", job.id,
   ];
   if (dryRun) args.push("--dry-run");
-  if (toolNames.length > 0 && Array.isArray(body.tools)) {
+  // Always pass explicit tool list so runner + dashboard stay aligned
+  if (toolNames.length > 0) {
     args.push("--tools", toolNames.join(","));
   }
 
@@ -128,17 +129,26 @@ export async function POST(request: Request) {
 
     child.on("exit", async (code) => {
       if (code === 0) {
-        // Read runner's summary for accurate findings count
+        // Read runner's summary for accurate findings count + actual tools run
         let findings = 0;
+        let actualTools: string[] | undefined;
         try {
           const summaryPath = join(getProjectRoot(), "reports", ".jobs", `${job.id}-summary.json`);
           const raw = await readFile(summaryPath, "utf-8");
           const summary = JSON.parse(raw);
           findings = summary.total_findings || 0;
+          // Update tools list to only include tools that actually ran (not skipped/missing)
+          if (Array.isArray(summary.results)) {
+            actualTools = summary.results
+              .filter((r: { status: string }) => r.status !== "skipped")
+              .map((r: { tool: string }) => r.tool);
+          }
         } catch {
           findings = await countAllFindings(toolNames);
         }
-        await updateJob(job.id, { status: "completed", progress: 100, findings });
+        const patch: Record<string, unknown> = { status: "completed", progress: 100, findings };
+        if (actualTools) patch.tools = actualTools;
+        await updateJob(job.id, patch);
       } else {
         await updateJob(job.id, { status: "failed", error: `Process exited with code ${code}` });
       }

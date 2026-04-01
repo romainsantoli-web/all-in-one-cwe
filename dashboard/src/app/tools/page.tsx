@@ -90,14 +90,12 @@ function ToolCard({ tool, inLight, inMedium, onRun }: { tool: ToolMeta; inLight:
           </span>
         ))}
       </div>
-      {(tool.requires === "target") && (
-        <button
-          onClick={() => onRun(tool.name)}
-          className="mt-3 w-full py-1.5 text-xs font-medium rounded bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)]/30 transition-colors"
-        >
-          ▶ Run
-        </button>
-      )}
+      <button
+        onClick={() => onRun(tool.name)}
+        className="mt-3 w-full py-1.5 text-xs font-medium rounded bg-[var(--accent)]/20 text-[var(--accent)] hover:bg-[var(--accent)]/30 transition-colors"
+      >
+        ▶ Run
+      </button>
     </div>
   );
 }

@@ -9,7 +9,7 @@ Comprehensive SSRF testing combining:
   5. Protocol smuggling (file://, gopher://, dict://)
   6. Out-of-band SSRF via configurable callback URL
 
-Source: doctolib_ssrf_probe.py from Doctolib bug bounty campaign.
+Source: ssrf_probe.py from real bug bounty campaign.
 
 Usage:
     python ssrf_scanner.py --target https://example.com --dry-run

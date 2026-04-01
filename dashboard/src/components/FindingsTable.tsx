@@ -210,8 +210,8 @@ export default function FindingsTable({ findings }: { findings: Finding[] }) {
                               <strong className="text-[var(--text-muted)]">
                                 Evidence
                               </strong>
-                              <pre className="mt-1 bg-[var(--card-bg)] p-2 rounded text-xs overflow-x-auto">
-                                {f.evidence}
+                              <pre className="mt-1 bg-[var(--card-bg)] p-2 rounded text-xs overflow-x-auto whitespace-pre-wrap">
+                                {typeof f.evidence === "string" ? f.evidence : JSON.stringify(f.evidence, null, 2)}
                               </pre>
                             </div>
                           )}

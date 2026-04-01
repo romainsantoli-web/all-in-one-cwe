@@ -1,0 +1,19 @@
+# Commix Configuration
+# ======================
+# OS command injection scanner settings.
+
+level: 2
+
+# Custom headers:
+# headers:
+#   - "X-Forwarded-For: 127.0.0.1"
+#   - "X-Custom-IP: 127.0.0.1"
+
+# Endpoints to test for command injection:
+# endpoints:
+#   - path: /api/ping
+#     method: POST
+#     param: host
+#   - path: /api/dns
+#     method: GET
+#     param: domain

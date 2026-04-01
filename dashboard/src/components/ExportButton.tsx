@@ -65,6 +65,27 @@ interface ExportButtonProps {
 
 export default function ExportButton({ findings, reportFilename }: ExportButtonProps) {
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [mdLoading, setMdLoading] = useState(false);
+
+  async function downloadMarkdown() {
+    if (!reportFilename) return;
+    setMdLoading(true);
+    try {
+      const res = await fetch(`/api/scans/${encodeURIComponent(reportFilename)}/export?format=markdown`);
+      if (!res.ok) throw new Error("Markdown generation failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = reportFilename.replace(/\.json$/i, ".md");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Markdown download error:", e);
+    } finally {
+      setMdLoading(false);
+    }
+  }
 
   async function downloadPDF() {
     if (!reportFilename) return;
@@ -99,6 +120,16 @@ export default function ExportButton({ findings, reportFilename }: ExportButtonP
             <DownloadIcon />
           )}
           PDF
+        </button>
+      )}
+      {reportFilename && (
+        <button onClick={downloadMarkdown} disabled={mdLoading} className={`${btnClass} ${mdLoading ? "opacity-50 cursor-wait" : ""}`}>
+          {mdLoading ? (
+            <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeDashoffset="10" /></svg>
+          ) : (
+            <DownloadIcon />
+          )}
+          MD
         </button>
       )}
       <button

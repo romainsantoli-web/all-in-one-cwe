@@ -362,20 +362,6 @@ CHAIN_RULES: list[dict] = [
         "severity": "critical",
         "typical_payout": "$5K-$50K",
     },
-    # ── User enumeration chains ───────────────────────────
-    {
-        "id": "USER_ENUM→BRUTE_FORCE→ATO",
-        "trigger_cwe": "CWE-203",
-        "next_steps": [
-            {"action": "collect_valid_usernames", "tools": ["user-enum"],
-             "escalates_to": "CWE-200"},
-            {"action": "brute_force_passwords", "tools": [],
-             "escalates_to": "CWE-307"},
-        ],
-        "final_impact": "Account Takeover via user enumeration + credential stuffing",
-        "severity": "medium",
-        "typical_payout": "$200-$2K",
-    },
     # ── 403 Bypass chains ─────────────────────────────────
     {
         "id": "403_BYPASS→ADMIN_ACCESS",
@@ -389,6 +375,120 @@ CHAIN_RULES: list[dict] = [
         "final_impact": "Access to admin/internal endpoints via 403 bypass",
         "severity": "high",
         "typical_payout": "$500-$5K",
+    },
+    # ── Brute-force chains ────────────────────────────────
+    {
+        "id": "USER_ENUM→BRUTE_FORCE→ATO",
+        "trigger_cwe": "CWE-307",
+        "next_steps": [
+            {"action": "enumerate_valid_users", "tools": ["user-enum", "brute-forcer"],
+             "escalates_to": "CWE-203"},
+            {"action": "brute_force_credentials", "tools": ["brute-forcer", "hydra"],
+             "escalates_to": "CWE-521"},
+        ],
+        "final_impact": "Account Takeover via brute-force after user enumeration",
+        "severity": "high",
+        "typical_payout": "$500-$5K",
+    },
+    {
+        "id": "DEFAULT_CREDS→ADMIN→DATA",
+        "trigger_cwe": "CWE-798",
+        "next_steps": [
+            {"action": "test_default_credentials", "tools": ["brute-forcer"],
+             "escalates_to": "CWE-287"},
+            {"action": "access_admin_panel", "tools": ["api-discovery"],
+             "escalates_to": "CWE-269"},
+        ],
+        "final_impact": "Admin access via default credentials → data exfiltration",
+        "severity": "critical",
+        "typical_payout": "$1K-$10K",
+    },
+    # ── Command injection chains ──────────────────────────
+    {
+        "id": "CMDI→RCE→LATERAL",
+        "trigger_cwe": "CWE-78",
+        "next_steps": [
+            {"action": "confirm_os_command_exec", "tools": ["commix"],
+             "escalates_to": "CWE-94"},
+            {"action": "escalate_to_shell", "tools": ["commix"],
+             "escalates_to": "CWE-250"},
+        ],
+        "final_impact": "Remote Code Execution via OS command injection",
+        "severity": "critical",
+        "typical_payout": "$5K-$30K",
+    },
+    # ── OSINT → targeted attack chains ────────────────────
+    {
+        "id": "EXPOSED_SERVICE→CVE_EXPLOIT",
+        "trigger_cwe": "CWE-200",
+        "next_steps": [
+            {"action": "shodan_service_discovery", "tools": ["osint-enricher", "shodan-cli"],
+             "escalates_to": "CWE-1035"},
+            {"action": "searchsploit_exploit_lookup", "tools": ["osint-enricher", "searchsploit"],
+             "escalates_to": "CWE-94"},
+        ],
+        "final_impact": "Exploitation of known CVE on exposed service",
+        "severity": "high",
+        "typical_payout": "$500-$10K",
+    },
+    # ── Missing security headers + PoC chains ─────────────
+    {
+        "id": "NO_CSP→XSS→ATO",
+        "trigger_cwe": "CWE-79",
+        "next_steps": [
+            {"action": "verify_csp_missing", "tools": ["header-classifier", "header-poc-generator"],
+             "escalates_to": "CWE-79"},
+            {"action": "inject_xss_payload", "tools": ["xss-scanner", "dalfox"],
+             "escalates_to": "CWE-79"},
+            {"action": "exfiltrate_session_tokens", "tools": ["header-poc-generator"],
+             "escalates_to": "CWE-522"},
+        ],
+        "final_impact": "XSS → No CSP → Session hijack / API key theft / ATO on LLM provider",
+        "severity": "critical",
+        "typical_payout": "$500-$10K",
+    },
+    {
+        "id": "NO_HSTS→MITM→CREDENTIAL_THEFT",
+        "trigger_cwe": "CWE-319",
+        "next_steps": [
+            {"action": "verify_hsts_missing", "tools": ["header-classifier", "header-poc-generator"],
+             "escalates_to": "CWE-319"},
+            {"action": "sslstrip_mitm_attack", "tools": ["header-poc-generator"],
+             "escalates_to": "CWE-300"},
+            {"action": "intercept_session_cookies", "tools": [],
+             "escalates_to": "CWE-614"},
+        ],
+        "final_impact": "Protocol downgrade → cleartext credential interception on shared WiFi",
+        "severity": "high",
+        "typical_payout": "$500-$5K",
+    },
+    {
+        "id": "NO_XFRAME→CLICKJACK→SENSITIVE_ACTION",
+        "trigger_cwe": "CWE-1021",
+        "next_steps": [
+            {"action": "verify_xframe_missing", "tools": ["header-classifier", "header-poc-generator"],
+             "escalates_to": "CWE-1021"},
+            {"action": "build_clickjacking_poc", "tools": ["header-poc-generator"],
+             "escalates_to": "CWE-451"},
+            {"action": "trigger_sensitive_action", "tools": [],
+             "escalates_to": "CWE-352"},
+        ],
+        "final_impact": "Clickjacking → unauthorized API key creation / account deletion / settings change",
+        "severity": "high",
+        "typical_payout": "$300-$3K",
+    },
+    {
+        "id": "NO_CSP→NO_XFRAME→FULL_UI_TAKEOVER",
+        "trigger_cwe": "CWE-79",
+        "next_steps": [
+            {"action": "verify_both_missing", "tools": ["header-poc-generator"],
+             "escalates_to": "CWE-1021"},
+            {"action": "iframe_xss_combo", "tools": ["xss-scanner", "header-poc-generator"],
+             "escalates_to": "CWE-79"},
+        ],
+        "final_impact": "Combined: iframe the target + inject XSS via missing CSP = full UI takeover",
+        "severity": "critical",
+        "typical_payout": "$1K-$10K",
     },
 ]
 

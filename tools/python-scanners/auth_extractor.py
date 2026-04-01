@@ -661,7 +661,7 @@ def main() -> int:
     parser.add_argument(
         "--target", "-t",
         required=True,
-        help="Target URL (e.g. https://www.doctolib.fr)",
+        help="Target URL (e.g. https://target.example.com)",
     )
     parser.add_argument(
         "--output", "-o",

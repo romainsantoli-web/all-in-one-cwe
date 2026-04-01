@@ -167,6 +167,9 @@ def save_findings(findings: list[Finding], tool_name: str) -> Path:
         })
 
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    # Always update scan-latest.json so dashboard/runner read the freshest results
+    latest = out / "scan-latest.json"
+    latest.write_text(json.dumps(data, indent=2, ensure_ascii=False))
     log.info("Saved %d findings → %s", len(findings), path)
     return path
 

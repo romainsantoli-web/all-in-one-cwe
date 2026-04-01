@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { getAllTools, buildGraphData, PARALLEL_GROUPS, CWE_TRIGGERS, LLM_PROVIDERS } from "@/lib/tools-data";
+import { getProviderSettings } from "@/lib/settings";
 
 const PROJECT_ROOT = process.env.PROJECT_ROOT || "/data";
 
@@ -41,10 +42,11 @@ export async function GET() {
     llmConfig = raw;
   } catch { /* skip */ }
 
-  // Check which env vars are present (boolean only, never expose values)
+  // Check which env vars are present (saved settings + process.env, never expose values)
+  const saved = await getProviderSettings();
   const envStatus: Record<string, boolean> = {};
   for (const p of LLM_PROVIDERS) {
-    envStatus[p.envVar] = !!process.env[p.envVar];
+    envStatus[p.envVar] = !!(saved[p.envVar] || process.env[p.envVar]);
   }
 
   return NextResponse.json({

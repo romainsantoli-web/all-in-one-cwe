@@ -234,6 +234,14 @@ export default function ScanActions({ filename, onDeleted, onRenamed }: ScanActi
                 <span className="w-6 text-green-500 font-bold text-[10px]">CSV</span>
                 {loading === "csv" ? "Generating…" : "Download CSV"}
               </button>
+              <button
+                onClick={() => exportForPlatform("markdown")}
+                disabled={loading === "export-markdown"}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg)] transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                <span className="w-6 text-violet-500 font-bold text-[10px]">MD</span>
+                {loading === "export-markdown" ? "Generating…" : "Download MD"}
+              </button>
             </div>
           </>
         )}

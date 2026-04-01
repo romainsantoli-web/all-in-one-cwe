@@ -43,3 +43,8 @@ token.txt
 .cache/
 reports/.jobs/
 reports/.settings/
+scope-lv.yaml
+# Conversation logs
+scripts/*conversation*.md
+_backup*/
+-.json

@@ -76,15 +76,19 @@ class CheckpointEvent:
 # Tools available per state
 STATE_TOOLS: dict[str, list[str]] = {
     "scoping": ["scope_check", "target_probe"],
-    "profiling": ["tech_detect", "memory_recall", "whatweb", "httpx"],
-    "recon": ["subfinder", "katana", "amass", "dnsx", "whatweb", "httpx", "wafw00f"],
+    "profiling": ["tech_detect", "memory_recall", "whatweb", "httpx", "osint-enricher"],
+    "recon": [
+        "subfinder", "katana", "amass", "dnsx", "whatweb", "httpx", "wafw00f",
+        "masscan", "recon-ng", "shodan-cli", "osint-enricher",
+    ],
     "hunting": [
         "nuclei", "sqlmap", "xss-scanner", "ssrf-scanner", "idor-scanner",
         "auth-bypass", "secret-leak", "api-discovery", "zap-baseline",
         "nikto", "ffuf", "feroxbuster", "semgrep", "testssl",
+        "brute-forcer", "commix", "wapiti",
     ],
     "chaining": ["chain_check"],
-    "validating": ["validate_finding"],
+    "validating": ["validate_finding", "mitmproxy"],
     "reporting": ["generate_report"],
 }
 

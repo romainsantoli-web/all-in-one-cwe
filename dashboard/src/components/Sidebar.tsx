@@ -79,6 +79,46 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/passwords",
+    label: "Passwords",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+    ),
+  },
+  {
+    href: "/forensics",
+    label: "Forensics",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        <line x1="11" y1="8" x2="11" y2="14" />
+        <line x1="8" y1="11" x2="14" y2="11" />
+      </svg>
+    ),
+  },
+  {
+    href: "/reversing",
+    label: "Reversing",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <path d="M9 9h6v6H9z" />
+        <line x1="9" y1="1" x2="9" y2="4" />
+        <line x1="15" y1="1" x2="15" y2="4" />
+        <line x1="9" y1="20" x2="9" y2="23" />
+        <line x1="15" y1="20" x2="15" y2="23" />
+        <line x1="20" y1="9" x2="23" y2="9" />
+        <line x1="20" y1="15" x2="23" y2="15" />
+        <line x1="1" y1="9" x2="4" y2="9" />
+        <line x1="1" y1="15" x2="4" y2="15" />
+      </svg>
+    ),
+  },
+  {
     href: "/tools",
     label: "Tools",
     icon: (
@@ -182,7 +222,7 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item, i) => {
-          const showSeparator = item.label === "Tools";
+          const showSeparator = item.label === "Passwords";
           const showSettingsSep = item.label === "Settings";
           return (
             <div key={item.href}>
@@ -208,7 +248,7 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div>All-in-One CWE v1.0</div>
-        <div className="mt-1">79 tools · 76 services</div>
+        <div className="mt-1">86 tools · 76 services</div>
       </div>
     </aside>
   );

@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import TerminalPanel from "@/components/TerminalPanel";
 import InteractiveTerminal from "@/components/InteractiveTerminal";
+import AdbCaptureTerminal from "@/components/AdbCaptureTerminal";
+import type { AdbCaptureConfig } from "@/components/TerminalBubble";
 
 /* ---------- types ---------- */
 
@@ -56,9 +58,10 @@ interface SelectedItem {
 interface TerminalOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  adbCapture?: AdbCaptureConfig | null;
 }
 
-export default function TerminalOverlay({ isOpen, onClose }: TerminalOverlayProps) {
+export default function TerminalOverlay({ isOpen, onClose, adbCapture }: TerminalOverlayProps) {
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
   const [aiSessions, setAiSessions] = useState<AISession[]>([]);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
@@ -604,6 +607,11 @@ export default function TerminalOverlay({ isOpen, onClose }: TerminalOverlayProp
                   🔧 {activeScanTerm.tool || "scan"} — {activeScanTerm.target.slice(0, 40)}
                 </span>
               )}
+              {adbCapture && !activeAiSession && !activeScanTerm && (
+                <span className="text-xs text-[var(--text-muted)] font-mono">
+                  📡 {adbCapture.title || "WiFi Capture"} — {adbCapture.iface}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {message && (
@@ -621,7 +629,18 @@ export default function TerminalOverlay({ isOpen, onClose }: TerminalOverlayProp
 
           {/* Terminal content */}
           <div className="terminal-overlay-content">
-            {activeAiSession ? (
+            {adbCapture ? (
+              <AdbCaptureTerminal
+                key={`adb-${adbCapture.serial}-${adbCapture.endpoint || "capture"}-${Date.now()}`}
+                serial={adbCapture.serial}
+                iface={adbCapture.iface}
+                packets={adbCapture.packets}
+                outFile={adbCapture.outFile}
+                endpoint={adbCapture.endpoint}
+                title={adbCapture.title}
+                extraBody={adbCapture.extraBody}
+              />
+            ) : activeAiSession ? (
               <InteractiveTerminal
                 key={activeAiSession.id}
                 sessionId={activeAiSession.id}

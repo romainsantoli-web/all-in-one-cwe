@@ -439,6 +439,51 @@ if [[ -n "$TARGET" ]]; then
     run_tool "secret-leak" "secret-leak" --profile python-scanners
 fi
 
+# ── 37. Brute-Forcer — Default creds + rate limit ──────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "brute-forcer" "brute-forcer" --profile python-scanners
+fi
+
+# ── 38. Commix — OS Command Injection ──────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "commix" "commix" --profile injection
+fi
+
+# ── 39. Wapiti — DAST Web Scanner ──────────────────────────
+if [[ -n "$TARGET" ]]; then
+    run_tool "wapiti" "wapiti" --profile dast
+fi
+
+# ── 40. OSINT Enricher — Shodan + SearchSploit ─────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "osint-enricher" "osint-enricher" --profile python-scanners
+fi
+
+# ── 41. Masscan — Mass port scanning ───────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "masscan" "masscan" --profile network
+fi
+
+# ── 42. Recon-ng — OSINT framework ─────────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "recon-ng" "recon-ng" --profile osint
+fi
+
+# ── 43. Shodan CLI — Internet exposure ─────────────────────
+if [[ -n "$DOMAIN" ]]; then
+    run_tool "shodan-cli" "shodan-cli" --profile osint
+fi
+
+# ── 44. Hydra — Brute-force (targeted) ─────────────────────
+if should_run "hydra" && [[ -n "$TARGET" ]]; then
+    run_tool "hydra" "hydra" --profile brute-force
+fi
+
+# ── 45. mitmproxy — Traffic interception (manual) ──────────
+if should_run "mitmproxy"; then
+    run_tool "mitmproxy" "mitmproxy" --profile proxy
+fi
+
 # ── 36. Report Merge ────────────────────────────────────────
 header "Report Generation"
 log "Merging reports..."

@@ -1,0 +1,1 @@
+{"version":3,"file":"veracrypt.d.ts","sourceRoot":"","sources":["../../src/formats/veracrypt.ts"],"names":[],"mappings":"AASA,OAAO,KAAK,EAAE,aAAa,EAAE,aAAa,EAAc,MAAM,aAAa,CAAC;AAE5E,MAAM,WAAW,eAAgB,SAAQ,aAAa;IACpD,IAAI,EAAE,WAAW,CAAC;IAClB,MAAM,EAAE,MAAM,CAAC;IACf,YAAY,CAAC,EAAE,MAAM,CAAC;IACtB,WAAW,EAAE,OAAO,CAAC;CACtB;AAuDD,eAAO,MAAM,gBAAgB,EAAE,aAwG9B,CAAC"}

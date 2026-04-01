@@ -8,8 +8,8 @@
 #   - /login
 #   - /app
 #   - /dashboard
-#   - /patient     # Doctolib-specific
-#   - /booking     # Doctolib-specific
+#   - /patient     # target-specific
+#   - /booking     # target-specific
 
 # Additional API paths to probe (appended to defaults):
 # api_paths:

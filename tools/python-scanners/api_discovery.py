@@ -8,7 +8,7 @@ Comprehensive API endpoint discovery combining:
   4. Endpoint enumeration — test discovered APIs with/without auth
   5. Source map detection — .js.map leaking full source code
 
-Source: db_phase14b_apidiscovery.js + db_deep_probe.js from Doctolib bug bounty campaign.
+Source: db_phase14b_apidiscovery.js + db_deep_probe.js from real bug bounty campaign.
 
 Usage:
     python api_discovery.py --target https://example.com --dry-run

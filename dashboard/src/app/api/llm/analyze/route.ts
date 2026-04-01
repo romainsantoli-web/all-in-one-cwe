@@ -2,14 +2,16 @@
 import { NextResponse } from "next/server";
 import { callLLM } from "@/lib/llm-bridge";
 import { LLM_PROVIDERS } from "@/lib/tools-data";
+import { getProviderSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 const PROVIDER_NAMES = new Set(LLM_PROVIDERS.map((p) => p.name));
 
-function getDefaultProvider(): string | null {
+async function getDefaultProvider(): Promise<string | null> {
+  const saved = await getProviderSettings();
   for (const p of LLM_PROVIDERS) {
-    if (process.env[p.envVar]) return p.name;
+    if (saved[p.envVar] || process.env[p.envVar]) return p.name;
   }
   return null;
 }
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   // Validate provider
   const provider = typeof body.provider === "string" && PROVIDER_NAMES.has(body.provider)
     ? body.provider
-    : getDefaultProvider();
+    : await getDefaultProvider();
   if (!provider) {
     return NextResponse.json({ error: "No LLM provider available. Configure an API key." }, { status: 503 });
   }
