@@ -1,15 +1,16 @@
 # 🛡️ Security All-in-One CWE — Bug Bounty Testing Suite
 
-Suite complète de **59 outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
-Tous les outils tournent via Docker Compose — un seul `make run` pour tout lancer.
+Suite complète de **70+ outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
+Docker Compose + binaires natifs + scanners Python custom — un seul `make setup-all` pour tout installer.
 
 ---
 
 ## 📋 Table des matières
 
 - [Installation rapide](#-installation-rapide)
+- [Méthodes d'installation](#-méthodes-dinstallation)
 - [Architecture](#-architecture)
-- [Les 59 outils](#-les-59-outils)
+- [Les 70+ outils](#-les-70-outils)
 - [Tutoriel d&#39;utilisation](#-tutoriel-dutilisation)
 - [Commandes Make](#-commandes-make)
 - [Mapping CWE → Outil](#-mapping-cwe--outil)
@@ -23,11 +24,11 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 
 ```bash
 # Cloner le repo
-git clone https://github.com/VOTRE_USERNAME/security-all-in-one-cwe.git
-cd security-all-in-one-cwe
+git clone https://github.com/romainsantoli-web/all-in-one-cwe.git
+cd all-in-one-cwe
 
-# Construire et tirer toutes les images
-make setup
+# ⚡ TOUT installer en une seule commande (Docker + natif + Python + git tools)
+make setup-all
 
 # Lancer un scan complet
 make run TARGET=https://target.example.com
@@ -35,12 +36,88 @@ make run TARGET=https://target.example.com
 
 ### Prérequis
 
-| Ressource | Minimum              | Recommandé      |
-| --------- | -------------------- | ---------------- |
-| Docker    | >= 24.0 + Compose v2 | Dernière stable |
-| RAM       | 8 Go                 | 16 Go            |
-| Disque    | 20 Go                | 40 Go            |
-| OS        | macOS / Linux        | —               |
+| Ressource | Minimum              | Recommandé       |
+| --------- | -------------------- | ----------------- |
+| Docker    | >= 24.0 + Compose v2 | Dernière stable  |
+| Go        | >= 1.22              | Dernière stable  |
+| Python    | >= 3.10              | 3.12              |
+| Node.js   | >= 18                | 20 LTS            |
+| RAM       | 8 Go                 | 16 Go             |
+| Disque    | 20 Go                | 40 Go             |
+| OS        | macOS / Linux        | —                |
+
+---
+
+## 📦 Méthodes d'installation
+
+### Option 1 — Tout installer (recommandé)
+
+Installe **tout** en une commande : images Docker, binaires Go/Rust, packages Python, outils git-cloned, outils système.
+
+```bash
+make setup-all
+# ou directement :
+./scripts/install-tools.sh --all
+```
+
+### Option 2 — Docker uniquement
+
+Pull les 26 images Docker officielles + build les ~40 services custom.
+
+```bash
+make setup-docker
+# ou : ./scripts/install-tools.sh --docker
+```
+
+### Option 3 — Natif uniquement (sans Docker)
+
+Installe les binaires Go (nuclei, httpx, katana...), Rust (feroxbuster), Python (sqlmap, semgrep...), et outils système (nmap, testssl...).
+
+```bash
+make setup-native
+# ou : ./scripts/install-tools.sh --native
+```
+
+### Option 4 — Installation minimale (15 outils essentiels)
+
+Pour démarrer rapidement avec les outils les plus importants.
+
+```bash
+make setup-minimal
+# ou : ./scripts/install-tools.sh --minimal
+```
+
+### Option 5 — Image Docker all-in-one
+
+Une seule image Docker (~4-5 Go) contenant tous les outils compilés.
+
+```bash
+make build-aio
+# Puis utiliser :
+docker run -v ./reports:/output security-aio:latest nuclei -u https://target.com
+docker run -v ./reports:/output security-aio:latest httpx -l urls.txt
+```
+
+### Vérifier l'installation
+
+```bash
+make check
+# Affiche un tableau de tous les outils avec leur statut (✓/✗)
+```
+
+### Inventaire des composants installés
+
+| Catégorie | Nombre | Exemples |
+|-----------|--------|----------|
+| Images Docker officielles | 26 | nuclei, zaproxy, trivy, gitleaks, nmap... |
+| Services Docker custom | ~44 | sqlmap, sstimap, graphw00f, whatweb, nikto... |
+| Binaires Go | 12 | nuclei, httpx, subfinder, katana, dalfox, ffuf... |
+| Binaires Rust | 2 | feroxbuster, cherrybomb |
+| Packages Python (pip) | 9 | sqlmap, semgrep, arjun, wafw00f, wapiti3... |
+| Outils git-cloned | 13 | SSTImap, SSRFmap, jwt_tool, theHarvester... |
+| Outils système | 4 | nmap, nikto, testssl, whatweb |
+| Scanners Python custom | 20+ | idor, auth-bypass, xss-scanner, ssrf-scanner... |
+| **Total** | **70+** | |
 
 ---
 
@@ -48,18 +125,28 @@ make run TARGET=https://target.example.com
 
 ```
 security-all-in-one-cwe/
-├── docker-compose.yml          # 50 services Docker
+├── docker-compose.yml          # 70 services Docker (26 images + 44 custom builds)
+├── Dockerfile.all-in-one       # Image unique avec TOUS les outils compilés
 ├── runner.sh                   # Orchestrateur séquentiel (36 sections)
-├── Makefile                    # 48 targets (make run, make xss, etc.)
+├── Makefile                    # 60+ targets (make run, make setup-all, etc.)
+├── scripts/
+│   ├── install-tools.sh        # ⚡ Installeur unifié (Docker + natif + Python)
+│   ├── smart_scan.py           # Pipeline AI-assisted
+│   ├── merge-reports.py        # Fusion des rapports
+│   ├── cwe-summary.py          # Résumé par CWE
+│   └── ...
+├── orchestrator/               # Prefect DAG orchestrator
+├── tools/python-scanners/      # 20+ scanners Python custom
+├── dashboard/                  # Next.js 15 dashboard (16 pages)
 ├── configs/                    # Configs Nuclei, ZAP, Semgrep, Trivy, Gitleaks
 ├── custom-rules/               # Templates Nuclei, Semgrep, CodeQL custom
-├── scripts/                    # merge-reports.py, cwe-summary.py, defectdojo-import.sh
-└── reports/                    # Résultats par outil (47 sous-dossiers)
+├── payloads/                   # PayloadsAllTheThings + engine
+└── reports/                    # Résultats par outil (70+ sous-dossiers)
 ```
 
 ---
 
-## 🔧 Les 59 outils
+## 🔧 Les 70+ outils
 
 ### 🎯 DAST — Dynamic Application Security Testing
 
@@ -196,7 +283,7 @@ security-all-in-one-cwe/
 | 49 | **api-discovery** | Découverte d'endpoints API via JS bundles, configs inline, source maps | 200, 540      | `python-scanners` |
 | 50 | **secret-leak**   | Détection de secrets/tokens dans réponses HTTP, JS, source maps       | 312, 540, 615 | `python-scanners` |
 
-### �📸 Autres
+### 📸 Autres
 
 | #  | Outil                  | Description                               | Profil         |
 | -- | ---------------------- | ----------------------------------------- | -------------- |
@@ -205,6 +292,56 @@ security-all-in-one-cwe/
 | — | **theHarvester** | OSINT (emails, noms, sous-domaines)       | `osint`      |
 | — | **Interactsh**   | Serveur out-of-band (callbacks)           | `oob`        |
 | — | **garak**        | Tests prompt injection LLM                | default        |
+
+### 🔥 Web Avancé & Injection
+
+| #  | Outil                | Description                                          | CWE              | Profil             |
+| -- | -------------------- | ---------------------------------------------------- | ---------------- | ------------------ |
+| 51 | **Commix**     | OS Command Injection automatisé                     | 78, 77           | `injection`      |
+| 52 | **Wapiti**     | DAST web scanner (XSS, SQLi, LFI, RFI)              | 79, 89, 78, 22   | `dast`           |
+| 53 | **Smuggler**   | HTTP Request Smuggling (CL.TE, TE.CL)               | 444              | `web-advanced`   |
+| 54 | **Hydra**      | Brute-force réseau (HTTP, SSH, FTP...)              | 307, 521         | `brute-force`    |
+| 55 | **Masscan**    | Port scanner ultra-rapide (1M pps)                   | 200, 16          | `network`        |
+
+### 📡 OSINT & Exploit Lookup
+
+| #  | Outil                  | Description                               | CWE     | Profil           |
+| -- | ---------------------- | ----------------------------------------- | ------- | ---------------- |
+| 56 | **Recon-ng**     | Framework OSINT modulaire                 | 200     | `osint`        |
+| 57 | **Shodan CLI**   | Internet exposure lookup                  | 200, 16 | `osint`        |
+| 58 | **SearchSploit** | Exploit-DB CLI (recherche d'exploits)    | —      | `exploit-lookup` |
+
+### 🔐 IaC & API Fuzzing
+
+| #  | Outil              | Description                          | CWE          | Profil         |
+| -- | ------------------ | ------------------------------------ | ------------ | -------------- |
+| 59 | **Checkov**  | IaC security (Terraform, K8s, Docker)| 284, 922, 16 | `iac`        |
+| 60 | **RESTler**  | Microsoft REST API fuzzer stateful   | 20, 89, 200  | `api-fuzzing`|
+
+### 🐍 Python Custom Scanners (20+ outils)
+
+| #  | Outil                         | Description                                    | CWE              | Profil              |
+| -- | ----------------------------- | ---------------------------------------------- | ---------------- | ------------------- |
+| 61 | **idor-scanner**        | Détection IDOR automatisée                    | 639              | `python-scanners` |
+| 62 | **auth-bypass**         | Auth bypass (role escalation, mass assignment) | 287, 284, 915    | `python-scanners` |
+| 63 | **user-enum**           | Enumération d'utilisateurs                    | 203, 204         | `python-scanners` |
+| 64 | **notif-inject**        | Injection dans notifications                   | 74, 79, 93       | `python-scanners` |
+| 65 | **redirect-cors**       | Open redirect + CORS                           | 601, 942         | `python-scanners` |
+| 66 | **oidc-audit**          | Audit OIDC/Keycloak                            | 200, 287, 522    | `python-scanners` |
+| 67 | **bypass-403-advanced** | 403 bypass + RPC discovery                     | 284              | `python-scanners` |
+| 68 | **ssrf-scanner**        | SSRF (metadata, OOB, smuggling)                | 918              | `python-scanners` |
+| 69 | **xss-scanner**         | XSS + SSTI + CSP bypass                        | 79, 693, 1336    | `python-scanners` |
+| 70 | **websocket-scanner**   | WebSocket security                             | 284, 345, 346    | `python-scanners` |
+| 71 | **cache-deception**     | Web Cache Deception                            | 346, 524         | `python-scanners` |
+| 72 | **waf-bypass**          | WAF bypass avancé (encoding, chunked)         | 178, 434, 89     | `python-scanners` |
+| 73 | **brute-forcer**        | Default creds + rate limit + password policy   | 307, 521, 798    | `python-scanners` |
+| 74 | **timing-oracle**       | Timing attack detection                        | 208, 918         | `python-scanners` |
+| 75 | **oauth-flow-scanner**  | OAuth flow vulnerabilities                     | 601, 613         | `python-scanners` |
+| 76 | **source-map-scanner**  | Source map exposure                            | 215, 798         | `python-scanners` |
+| 77 | **hidden-endpoint**     | Hidden endpoint discovery                      | 215, 548         | `python-scanners` |
+| 78 | **header-classifier**   | Security header analysis                       | 200              | `python-scanners` |
+| 79 | **osint-enricher**      | Shodan + SearchSploit enrichment               | 200, 1035        | `python-scanners` |
+| 80 | **cdp-token-extractor** | Chrome DevTools Protocol token extraction      | 320, 347         | `cdp-scanners`  |
 
 ---
 
@@ -441,9 +578,22 @@ make defectdojo-import    # Import automatique
 
 ## 🎯 Commandes Make — Référence complète
 
+### Installation
+
+| Commande                 | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `make setup`           | Pull images Docker + build custom                     |
+| `make setup-all`       | **⚡ TOUT installer** (Docker + natif + Python + git)  |
+| `make setup-native`    | Binaires natifs uniquement (Go, Rust, Python, système)|
+| `make setup-docker`    | Docker images uniquement (pull + build)               |
+| `make setup-minimal`   | 15 outils essentiels (rapide)                         |
+| `make build-aio`       | Build image all-in-one (`security-aio:latest`)       |
+| `make check`           | Vérifier les outils installés                        |
+
+### Scans
+
 | Commande                 | Description                                | Requires            |
 | ------------------------ | ------------------------------------------ | ------------------- |
-| `make setup`           | Pull images + build custom                 | —                  |
 | `make run`             | Scan complet                               | TARGET              |
 | `make full`            | Scan étendu (plus lent)                   | TARGET              |
 | `make dast`            | Nuclei + ZAP                               | TARGET              |
@@ -583,7 +733,16 @@ docker compose --profile recon --profile fuzz --profile waf up
 | `prototype`       | ppmap                                                                                                                                                     |
 | `graphql`         | clairvoyance                                                                                                                                              |
 | `cms`             | cmseek                                                                                                                                                    |
-| `python-scanners` | idor-scanner, auth-bypass, user-enum, notif-inject, redirect-cors, oidc-audit, bypass-403-advanced, ssrf-scanner, xss-scanner, api-discovery, secret-leak |
+| `python-scanners` | idor-scanner, auth-bypass, user-enum, notif-inject, redirect-cors, oidc-audit, bypass-403-advanced, ssrf-scanner, xss-scanner, api-discovery, secret-leak, websocket-scanner, cache-deception, waf-bypass, brute-forcer, osint-enricher... |
+| `cdp-scanners`    | cdp-token-extractor, cdp-checkout-interceptor, cdp-credential-scanner                                                                                     |
+| `web-advanced`    | smuggler (HTTP request smuggling)                                                                                                                         |
+| `injection`       | commix (OS command injection)                                                                                                                             |
+| `brute-force`     | hydra (network brute-force)                                                                                                                               |
+| `proxy`           | mitmproxy (HTTP/S interception)                                                                                                                           |
+| `iac`             | checkov (Terraform, K8s, Docker)                                                                                                                          |
+| `api-fuzzing`     | restler (Microsoft REST API fuzzer)                                                                                                                       |
+| `exploit-lookup`  | searchsploit (Exploit-DB)                                                                                                                                 |
+| `orchestrator`    | prefect-server, prefect-worker                                                                                                                            |
 | `defectdojo`      | defectdojo, defectdojo-db, defectdojo-rabbitmq                                                                                                            |
 
 ---

@@ -1,0 +1,180 @@
+# ⚠️ Contenu généré par IA — validation humaine requise avant utilisation.
+# =============================================================================
+# Dockerfile.all-in-one — Single image bundling ALL security tools
+# Build:  docker build -f Dockerfile.all-in-one -t security-aio:latest .
+# Run:    docker run -v ./reports:/output security-aio:latest nuclei -u https://target.com
+# Size:   ~4-5 GB (all tools compiled)
+# =============================================================================
+
+# ─── Stage 1: Go tools ──────────────────────────────────────────────────────
+FROM golang:1.22-bookworm AS go-builder
+
+ENV CGO_ENABLED=0
+
+RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
+    go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
+    go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest && \
+    go install github.com/projectdiscovery/katana/cmd/katana@latest && \
+    go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest && \
+    go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest && \
+    go install github.com/hahwul/dalfox/v2@latest && \
+    go install github.com/ffuf/ffuf/v2@latest && \
+    go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest && \
+    go install github.com/BishopFox/jsluice/cmd/jsluice@latest
+
+# Gowitness needs CGO for sqlite3
+ENV CGO_ENABLED=1
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && \
+    go install github.com/sensepost/gowitness@latest && \
+    rm -rf /var/lib/apt/lists/*
+
+# ppmap needs manual build
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
+    git clone --depth 1 https://github.com/kleiton0x00/ppmap.git /tmp/ppmap && \
+    cd /tmp/ppmap && go mod init ppmap && go mod tidy && \
+    CGO_ENABLED=0 go build -o /go/bin/ppmap . && \
+    rm -rf /tmp/ppmap /var/lib/apt/lists/*
+
+# ─── Stage 2: Rust tools ────────────────────────────────────────────────────
+FROM rust:latest AS rust-builder
+RUN cargo install feroxbuster && \
+    cargo install cherrybomb || true
+
+# ─── Stage 3: Node.js tools ─────────────────────────────────────────────────
+FROM node:20-slim AS node-builder
+RUN npm install -g retire
+
+# ─── Stage 4: Python git-cloned tools ───────────────────────────────────────
+FROM python:3.12-slim AS py-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Clone all git-based tools
+RUN git clone --depth 1 https://github.com/vladko312/SSTImap.git /opt/sstimap && \
+    git clone --depth 1 https://github.com/dolevf/graphw00f.git /opt/graphw00f && \
+    git clone --depth 1 https://github.com/initstring/cloud_enum.git /opt/cloud_enum && \
+    git clone --depth 1 https://github.com/swisskyrepo/SSRFmap.git /opt/ssrfmap && \
+    git clone --depth 1 https://github.com/fullhunt/log4j-scan.git /opt/log4j-scan && \
+    git clone --depth 1 https://github.com/laramies/theHarvester.git /opt/theharvester && \
+    git clone --depth 1 https://github.com/nikitastupin/clairvoyance.git /opt/clairvoyance && \
+    git clone --depth 1 https://github.com/Tuhinshubhra/CMSeeK.git /opt/cmseek && \
+    git clone --depth 1 https://github.com/lanmaster53/recon-ng.git /opt/recon-ng && \
+    git clone --depth 1 https://github.com/defparam/smuggler.git /opt/smuggler && \
+    git clone --depth 1 https://github.com/Nefcore/CORScanner.git /opt/corscanner && \
+    git clone --depth 1 https://github.com/iamj0ker/bypass-403.git /opt/bypass-403 && \
+    git clone --depth 1 https://github.com/ticarpi/jwt_tool.git /opt/jwt_tool && \
+    git clone --depth 1 https://github.com/commixproject/commix.git /opt/commix && \
+    git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto
+
+# Install Python dependencies for cloned tools
+RUN pip install --no-cache-dir \
+    -r /opt/sstimap/requirements.txt \
+    -r /opt/cloud_enum/requirements.txt \
+    -r /opt/ssrfmap/requirements.txt \
+    -r /opt/log4j-scan/requirements.txt \
+    -r /opt/jwt_tool/requirements.txt \
+    -r /opt/recon-ng/REQUIREMENTS \
+    requests beautifulsoup4 pyyaml \
+    2>/dev/null || true
+
+# Install theHarvester + clairvoyance as packages
+RUN pip install --no-cache-dir /opt/theharvester /opt/clairvoyance 2>/dev/null || true
+
+# ─── Stage 5: Final image ───────────────────────────────────────────────────
+FROM python:3.12-slim
+
+LABEL maintainer="security-all-in-one-cwe"
+LABEL description="All-in-one security testing toolkit — 70+ tools"
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nmap \
+    testssl.sh \
+    ruby \
+    perl \
+    libnet-ssleay-perl \
+    chromium \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    dnsutils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Go binaries
+COPY --from=go-builder /go/bin/ /usr/local/bin/
+
+# Copy Rust binaries
+COPY --from=rust-builder /usr/local/cargo/bin/feroxbuster /usr/local/bin/
+COPY --from=rust-builder /usr/local/cargo/bin/cherrybomb /usr/local/bin/ 2>/dev/null || true
+
+# Copy Node.js + retire
+COPY --from=node-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node-builder /usr/local/bin/node /usr/local/bin/
+COPY --from=node-builder /usr/local/bin/retire /usr/local/bin/ 2>/dev/null || true
+RUN ln -sf /usr/local/lib/node_modules/retire/bin/retire /usr/local/bin/retire 2>/dev/null || true
+
+# Copy git-cloned tools
+COPY --from=py-builder /opt/ /opt/
+COPY --from=py-builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=py-builder /usr/local/bin/ /tmp/py-bins/
+RUN cp /tmp/py-bins/theHarvester /usr/local/bin/ 2>/dev/null || true && \
+    rm -rf /tmp/py-bins
+
+# Install Python-based tools via pip
+RUN pip install --no-cache-dir \
+    sqlmap \
+    arjun \
+    wafw00f \
+    subdominator \
+    cve-bin-tool \
+    semgrep \
+    wapiti3 \
+    shodan \
+    && rm -rf /root/.cache/pip
+
+# Create non-root user for scanning
+RUN useradd -m -s /bin/bash scanner
+
+# Environment
+ENV CHROME_PATH=/usr/bin/chromium
+ENV PATH="/usr/local/bin:/opt/nikto/program:$PATH"
+ENV PYTHONPATH="/opt"
+
+# Default working directory
+WORKDIR /output
+
+# Wrapper script for tool dispatch
+COPY <<'WRAPPER' /usr/local/bin/aio-scan
+#!/usr/bin/env bash
+# Dispatch to the right tool based on first argument
+case "${1:-help}" in
+    help|--help|-h)
+        echo "Security All-in-One CWE — Docker Edition"
+        echo ""
+        echo "Usage: docker run security-aio:latest <tool> [args...]"
+        echo ""
+        echo "Available tools:"
+        echo "  DAST:     nuclei, zap (use zaproxy image), sqlmap, sstimap, nikto, wapiti"
+        echo "  XSS:      dalfox"
+        echo "  Recon:    subfinder, httpx, katana, naabu, dnsx, amass (use amass image)"
+        echo "  Fuzzing:  ffuf, feroxbuster, arjun"
+        echo "  Secrets:  semgrep, gitleaks (use gitleaks image), trufflehog (use image)"
+        echo "  Network:  nmap, testssl, crlfuzz"
+        echo "  API:      graphw00f, clairvoyance, cherrybomb"
+        echo "  OSINT:    theharvester, recon-ng, shodan"
+        echo "  Other:    gowitness, jsluice, retire, ppmap, dockle (use image)"
+        echo ""
+        echo "Example: docker run -v ./reports:/output security-aio:latest nuclei -u https://target.com"
+        ;;
+    *)
+        exec "$@"
+        ;;
+esac
+WRAPPER
+RUN chmod +x /usr/local/bin/aio-scan
+
+ENTRYPOINT ["aio-scan"]
+CMD ["help"]

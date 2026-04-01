@@ -37,12 +37,30 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Pull all Docker images
+setup: ## Pull all Docker images + build custom ones
 	@echo "Pulling Docker images..."
 	docker compose pull --ignore-buildable
 	@echo "Building custom images..."
 	docker compose build
 	@echo "Setup complete!"
+
+setup-all: ## Install EVERYTHING — Docker + native + Python + git tools
+	bash scripts/install-tools.sh --all
+
+setup-native: ## Install native tools only (no Docker) — Go, Rust, Python, system
+	bash scripts/install-tools.sh --native
+
+setup-minimal: ## Install 15 essential tools only (fast)
+	bash scripts/install-tools.sh --minimal
+
+setup-docker: ## Pull + build all Docker images only
+	bash scripts/install-tools.sh --docker
+
+check: ## Verify which tools are installed
+	bash scripts/install-tools.sh --check
+
+build-aio: ## Build the all-in-one Docker image (all tools in one image)
+	docker build -f Dockerfile.all-in-one -t security-aio:latest .
 
 run: ## Run ALL scans (DAST+DNS+SAST+Secrets+SCA) on TARGET
 	./runner.sh $(TARGET) --domain $(DOMAIN) --code $(CODE) --repo $(REPO) \
