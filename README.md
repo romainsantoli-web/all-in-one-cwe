@@ -15,7 +15,7 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 ## 📋 Table des matières
 
 - [Installation rapide](#-installation-rapide)
-- [Méthodes d'installation](#-méthodes-dinstallation)
+- [Méthodes d&#39;installation](#-méthodes-dinstallation)
 - [Architecture](#-architecture)
 - [Les 70+ outils](#-les-70-outils)
 - [Tutoriel d&#39;utilisation](#-tutoriel-dutilisation)
@@ -31,7 +31,8 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 
 ![Dashboard Home](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/dashboard.png)
 ![Scan Launcher](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/launch.png)
-![LLM Agent](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/llm-agent.png)
+![LLM Agent](screenshots/llm-agent.png)
+![LLM Agent Map](screenshots/llm-agent-map.png)
 ![DefectDojo Import](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/defectdojo.png)
 ![Terminal + PixelDog](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/terminal.png)
 
@@ -55,15 +56,15 @@ make run TARGET=https://target.example.com
 
 ### Prérequis
 
-| Ressource | Minimum              | Recommandé       |
-| --------- | -------------------- | ----------------- |
-| Docker    | >= 24.0 + Compose v2 | Dernière stable  |
-| Go        | >= 1.22              | Dernière stable  |
-| Python    | >= 3.10              | 3.12              |
-| Node.js   | >= 18                | 20 LTS            |
-| RAM       | 8 Go                 | 16 Go             |
-| Disque    | 20 Go                | 40 Go             |
-| OS        | macOS / Linux        | —                |
+| Ressource | Minimum              | Recommandé      |
+| --------- | -------------------- | ---------------- |
+| Docker    | >= 24.0 + Compose v2 | Dernière stable |
+| Go        | >= 1.22              | Dernière stable |
+| Python    | >= 3.10              | 3.12             |
+| Node.js   | >= 18                | 20 LTS           |
+| RAM       | 8 Go                 | 16 Go            |
+| Disque    | 20 Go                | 40 Go            |
+| OS        | macOS / Linux        | —               |
 
 ---
 
@@ -126,17 +127,17 @@ make check
 
 ### Inventaire des composants installés
 
-| Catégorie | Nombre | Exemples |
-|-----------|--------|----------|
-| Images Docker officielles | 26 | nuclei, zaproxy, trivy, gitleaks, nmap... |
-| Services Docker custom | ~44 | sqlmap, sstimap, graphw00f, whatweb, nikto... |
-| Binaires Go | 12 | nuclei, httpx, subfinder, katana, dalfox, ffuf... |
-| Binaires Rust | 2 | feroxbuster, cherrybomb |
-| Packages Python (pip) | 9 | sqlmap, semgrep, arjun, wafw00f, wapiti3... |
-| Outils git-cloned | 13 | SSTImap, SSRFmap, jwt_tool, theHarvester... |
-| Outils système | 4 | nmap, nikto, testssl, whatweb |
-| Scanners Python custom | 20+ | idor, auth-bypass, xss-scanner, ssrf-scanner... |
-| **Total** | **70+** | |
+| Catégorie                | Nombre        | Exemples                                          |
+| ------------------------- | ------------- | ------------------------------------------------- |
+| Images Docker officielles | 26            | nuclei, zaproxy, trivy, gitleaks, nmap...         |
+| Services Docker custom    | ~44           | sqlmap, sstimap, graphw00f, whatweb, nikto...     |
+| Binaires Go               | 12            | nuclei, httpx, subfinder, katana, dalfox, ffuf... |
+| Binaires Rust             | 2             | feroxbuster, cherrybomb                           |
+| Packages Python (pip)     | 9             | sqlmap, semgrep, arjun, wafw00f, wapiti3...       |
+| Outils git-cloned         | 13            | SSTImap, SSRFmap, jwt_tool, theHarvester...       |
+| Outils système           | 4             | nmap, nikto, testssl, whatweb                     |
+| Scanners Python custom    | 20+           | idor, auth-bypass, xss-scanner, ssrf-scanner...   |
+| **Total**           | **70+** |                                                   |
 
 ---
 
@@ -314,53 +315,53 @@ security-all-in-one-cwe/
 
 ### 🔥 Web Avancé & Injection
 
-| #  | Outil                | Description                                          | CWE              | Profil             |
-| -- | -------------------- | ---------------------------------------------------- | ---------------- | ------------------ |
-| 51 | **Commix**     | OS Command Injection automatisé                     | 78, 77           | `injection`      |
-| 52 | **Wapiti**     | DAST web scanner (XSS, SQLi, LFI, RFI)              | 79, 89, 78, 22   | `dast`           |
-| 53 | **Smuggler**   | HTTP Request Smuggling (CL.TE, TE.CL)               | 444              | `web-advanced`   |
-| 54 | **Hydra**      | Brute-force réseau (HTTP, SSH, FTP...)              | 307, 521         | `brute-force`    |
-| 55 | **Masscan**    | Port scanner ultra-rapide (1M pps)                   | 200, 16          | `network`        |
+| #  | Outil              | Description                             | CWE            | Profil           |
+| -- | ------------------ | --------------------------------------- | -------------- | ---------------- |
+| 51 | **Commix**   | OS Command Injection automatisé        | 78, 77         | `injection`    |
+| 52 | **Wapiti**   | DAST web scanner (XSS, SQLi, LFI, RFI)  | 79, 89, 78, 22 | `dast`         |
+| 53 | **Smuggler** | HTTP Request Smuggling (CL.TE, TE.CL)   | 444            | `web-advanced` |
+| 54 | **Hydra**    | Brute-force réseau (HTTP, SSH, FTP...) | 307, 521       | `brute-force`  |
+| 55 | **Masscan**  | Port scanner ultra-rapide (1M pps)      | 200, 16        | `network`      |
 
 ### 📡 OSINT & Exploit Lookup
 
-| #  | Outil                  | Description                               | CWE     | Profil           |
-| -- | ---------------------- | ----------------------------------------- | ------- | ---------------- |
-| 56 | **Recon-ng**     | Framework OSINT modulaire                 | 200     | `osint`        |
-| 57 | **Shodan CLI**   | Internet exposure lookup                  | 200, 16 | `osint`        |
-| 58 | **SearchSploit** | Exploit-DB CLI (recherche d'exploits)    | —      | `exploit-lookup` |
+| #  | Outil                  | Description                           | CWE     | Profil             |
+| -- | ---------------------- | ------------------------------------- | ------- | ------------------ |
+| 56 | **Recon-ng**     | Framework OSINT modulaire             | 200     | `osint`          |
+| 57 | **Shodan CLI**   | Internet exposure lookup              | 200, 16 | `osint`          |
+| 58 | **SearchSploit** | Exploit-DB CLI (recherche d'exploits) | —      | `exploit-lookup` |
 
 ### 🔐 IaC & API Fuzzing
 
-| #  | Outil              | Description                          | CWE          | Profil         |
-| -- | ------------------ | ------------------------------------ | ------------ | -------------- |
-| 59 | **Checkov**  | IaC security (Terraform, K8s, Docker)| 284, 922, 16 | `iac`        |
-| 60 | **RESTler**  | Microsoft REST API fuzzer stateful   | 20, 89, 200  | `api-fuzzing`|
+| #  | Outil             | Description                           | CWE          | Profil          |
+| -- | ----------------- | ------------------------------------- | ------------ | --------------- |
+| 59 | **Checkov** | IaC security (Terraform, K8s, Docker) | 284, 922, 16 | `iac`         |
+| 60 | **RESTler** | Microsoft REST API fuzzer stateful    | 20, 89, 200  | `api-fuzzing` |
 
 ### 🐍 Python Custom Scanners (20+ outils)
 
-| #  | Outil                         | Description                                    | CWE              | Profil              |
-| -- | ----------------------------- | ---------------------------------------------- | ---------------- | ------------------- |
-| 61 | **idor-scanner**        | Détection IDOR automatisée                    | 639              | `python-scanners` |
-| 62 | **auth-bypass**         | Auth bypass (role escalation, mass assignment) | 287, 284, 915    | `python-scanners` |
-| 63 | **user-enum**           | Enumération d'utilisateurs                    | 203, 204         | `python-scanners` |
-| 64 | **notif-inject**        | Injection dans notifications                   | 74, 79, 93       | `python-scanners` |
-| 65 | **redirect-cors**       | Open redirect + CORS                           | 601, 942         | `python-scanners` |
-| 66 | **oidc-audit**          | Audit OIDC/Keycloak                            | 200, 287, 522    | `python-scanners` |
-| 67 | **bypass-403-advanced** | 403 bypass + RPC discovery                     | 284              | `python-scanners` |
-| 68 | **ssrf-scanner**        | SSRF (metadata, OOB, smuggling)                | 918              | `python-scanners` |
-| 69 | **xss-scanner**         | XSS + SSTI + CSP bypass                        | 79, 693, 1336    | `python-scanners` |
-| 70 | **websocket-scanner**   | WebSocket security                             | 284, 345, 346    | `python-scanners` |
-| 71 | **cache-deception**     | Web Cache Deception                            | 346, 524         | `python-scanners` |
-| 72 | **waf-bypass**          | WAF bypass avancé (encoding, chunked)         | 178, 434, 89     | `python-scanners` |
-| 73 | **brute-forcer**        | Default creds + rate limit + password policy   | 307, 521, 798    | `python-scanners` |
-| 74 | **timing-oracle**       | Timing attack detection                        | 208, 918         | `python-scanners` |
-| 75 | **oauth-flow-scanner**  | OAuth flow vulnerabilities                     | 601, 613         | `python-scanners` |
-| 76 | **source-map-scanner**  | Source map exposure                            | 215, 798         | `python-scanners` |
-| 77 | **hidden-endpoint**     | Hidden endpoint discovery                      | 215, 548         | `python-scanners` |
-| 78 | **header-classifier**   | Security header analysis                       | 200              | `python-scanners` |
-| 79 | **osint-enricher**      | Shodan + SearchSploit enrichment               | 200, 1035        | `python-scanners` |
-| 80 | **cdp-token-extractor** | Chrome DevTools Protocol token extraction      | 320, 347         | `cdp-scanners`  |
+| #  | Outil                         | Description                                    | CWE           | Profil              |
+| -- | ----------------------------- | ---------------------------------------------- | ------------- | ------------------- |
+| 61 | **idor-scanner**        | Détection IDOR automatisée                   | 639           | `python-scanners` |
+| 62 | **auth-bypass**         | Auth bypass (role escalation, mass assignment) | 287, 284, 915 | `python-scanners` |
+| 63 | **user-enum**           | Enumération d'utilisateurs                    | 203, 204      | `python-scanners` |
+| 64 | **notif-inject**        | Injection dans notifications                   | 74, 79, 93    | `python-scanners` |
+| 65 | **redirect-cors**       | Open redirect + CORS                           | 601, 942      | `python-scanners` |
+| 66 | **oidc-audit**          | Audit OIDC/Keycloak                            | 200, 287, 522 | `python-scanners` |
+| 67 | **bypass-403-advanced** | 403 bypass + RPC discovery                     | 284           | `python-scanners` |
+| 68 | **ssrf-scanner**        | SSRF (metadata, OOB, smuggling)                | 918           | `python-scanners` |
+| 69 | **xss-scanner**         | XSS + SSTI + CSP bypass                        | 79, 693, 1336 | `python-scanners` |
+| 70 | **websocket-scanner**   | WebSocket security                             | 284, 345, 346 | `python-scanners` |
+| 71 | **cache-deception**     | Web Cache Deception                            | 346, 524      | `python-scanners` |
+| 72 | **waf-bypass**          | WAF bypass avancé (encoding, chunked)         | 178, 434, 89  | `python-scanners` |
+| 73 | **brute-forcer**        | Default creds + rate limit + password policy   | 307, 521, 798 | `python-scanners` |
+| 74 | **timing-oracle**       | Timing attack detection                        | 208, 918      | `python-scanners` |
+| 75 | **oauth-flow-scanner**  | OAuth flow vulnerabilities                     | 601, 613      | `python-scanners` |
+| 76 | **source-map-scanner**  | Source map exposure                            | 215, 798      | `python-scanners` |
+| 77 | **hidden-endpoint**     | Hidden endpoint discovery                      | 215, 548      | `python-scanners` |
+| 78 | **header-classifier**   | Security header analysis                       | 200           | `python-scanners` |
+| 79 | **osint-enricher**      | Shodan + SearchSploit enrichment               | 200, 1035     | `python-scanners` |
+| 80 | **cdp-token-extractor** | Chrome DevTools Protocol token extraction      | 320, 347      | `cdp-scanners`    |
 
 ---
 
@@ -599,15 +600,15 @@ make defectdojo-import    # Import automatique
 
 ### Installation
 
-| Commande                 | Description                                           |
-| ------------------------ | ----------------------------------------------------- |
-| `make setup`           | Pull images Docker + build custom                     |
-| `make setup-all`       | **⚡ TOUT installer** (Docker + natif + Python + git)  |
-| `make setup-native`    | Binaires natifs uniquement (Go, Rust, Python, système)|
-| `make setup-docker`    | Docker images uniquement (pull + build)               |
-| `make setup-minimal`   | 15 outils essentiels (rapide)                         |
-| `make build-aio`       | Build image all-in-one (`security-aio:latest`)       |
-| `make check`           | Vérifier les outils installés                        |
+| Commande               | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `make setup`         | Pull images Docker + build custom                           |
+| `make setup-all`     | **⚡ TOUT installer** (Docker + natif + Python + git) |
+| `make setup-native`  | Binaires natifs uniquement (Go, Rust, Python, système)     |
+| `make setup-docker`  | Docker images uniquement (pull + build)                     |
+| `make setup-minimal` | 15 outils essentiels (rapide)                               |
+| `make build-aio`     | Build image all-in-one (`security-aio:latest`)            |
+| `make check`         | Vérifier les outils installés                             |
 
 ### Scans
 
@@ -729,40 +730,40 @@ docker compose --profile recon up
 docker compose --profile recon --profile fuzz --profile waf up
 ```
 
-| Profil              | Outils activés                                                                                                                                           |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `recon`           | httpx, subfinder, naabu, katana                                                                                                                           |
-| `fuzz`            | ffuf, feroxbuster                                                                                                                                         |
-| `waf`             | wafw00f, bypass-403                                                                                                                                       |
-| `network`         | nmap                                                                                                                                                      |
-| `full`            | nuclei-full, zap-full                                                                                                                                     |
-| `subs`            | nuclei-subs                                                                                                                                               |
-| `gui`             | zap-gui                                                                                                                                                   |
-| `image`           | trivy-image                                                                                                                                               |
-| `xss`             | dalfox                                                                                                                                                    |
-| `jwt`             | jwt-tool                                                                                                                                                  |
-| `oob`             | interactsh                                                                                                                                                |
-| `js`              | jsluice                                                                                                                                                   |
-| `screenshot`      | gowitness                                                                                                                                                 |
-| `ssrf`            | ssrfmap                                                                                                                                                   |
-| `container`       | dockle                                                                                                                                                    |
-| `frontend-sca`    | retirejs                                                                                                                                                  |
-| `osint`           | theharvester                                                                                                                                              |
-| `openapi`         | cherrybomb                                                                                                                                                |
-| `prototype`       | ppmap                                                                                                                                                     |
-| `graphql`         | clairvoyance                                                                                                                                              |
-| `cms`             | cmseek                                                                                                                                                    |
+| Profil              | Outils activés                                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `recon`           | httpx, subfinder, naabu, katana                                                                                                                                                                                                            |
+| `fuzz`            | ffuf, feroxbuster                                                                                                                                                                                                                          |
+| `waf`             | wafw00f, bypass-403                                                                                                                                                                                                                        |
+| `network`         | nmap                                                                                                                                                                                                                                       |
+| `full`            | nuclei-full, zap-full                                                                                                                                                                                                                      |
+| `subs`            | nuclei-subs                                                                                                                                                                                                                                |
+| `gui`             | zap-gui                                                                                                                                                                                                                                    |
+| `image`           | trivy-image                                                                                                                                                                                                                                |
+| `xss`             | dalfox                                                                                                                                                                                                                                     |
+| `jwt`             | jwt-tool                                                                                                                                                                                                                                   |
+| `oob`             | interactsh                                                                                                                                                                                                                                 |
+| `js`              | jsluice                                                                                                                                                                                                                                    |
+| `screenshot`      | gowitness                                                                                                                                                                                                                                  |
+| `ssrf`            | ssrfmap                                                                                                                                                                                                                                    |
+| `container`       | dockle                                                                                                                                                                                                                                     |
+| `frontend-sca`    | retirejs                                                                                                                                                                                                                                   |
+| `osint`           | theharvester                                                                                                                                                                                                                               |
+| `openapi`         | cherrybomb                                                                                                                                                                                                                                 |
+| `prototype`       | ppmap                                                                                                                                                                                                                                      |
+| `graphql`         | clairvoyance                                                                                                                                                                                                                               |
+| `cms`             | cmseek                                                                                                                                                                                                                                     |
 | `python-scanners` | idor-scanner, auth-bypass, user-enum, notif-inject, redirect-cors, oidc-audit, bypass-403-advanced, ssrf-scanner, xss-scanner, api-discovery, secret-leak, websocket-scanner, cache-deception, waf-bypass, brute-forcer, osint-enricher... |
-| `cdp-scanners`    | cdp-token-extractor, cdp-checkout-interceptor, cdp-credential-scanner                                                                                     |
-| `web-advanced`    | smuggler (HTTP request smuggling)                                                                                                                         |
-| `injection`       | commix (OS command injection)                                                                                                                             |
-| `brute-force`     | hydra (network brute-force)                                                                                                                               |
-| `proxy`           | mitmproxy (HTTP/S interception)                                                                                                                           |
-| `iac`             | checkov (Terraform, K8s, Docker)                                                                                                                          |
-| `api-fuzzing`     | restler (Microsoft REST API fuzzer)                                                                                                                       |
-| `exploit-lookup`  | searchsploit (Exploit-DB)                                                                                                                                 |
-| `orchestrator`    | prefect-server, prefect-worker                                                                                                                            |
-| `defectdojo`      | defectdojo, defectdojo-db, defectdojo-rabbitmq                                                                                                            |
+| `cdp-scanners`    | cdp-token-extractor, cdp-checkout-interceptor, cdp-credential-scanner                                                                                                                                                                      |
+| `web-advanced`    | smuggler (HTTP request smuggling)                                                                                                                                                                                                          |
+| `injection`       | commix (OS command injection)                                                                                                                                                                                                              |
+| `brute-force`     | hydra (network brute-force)                                                                                                                                                                                                                |
+| `proxy`           | mitmproxy (HTTP/S interception)                                                                                                                                                                                                            |
+| `iac`             | checkov (Terraform, K8s, Docker)                                                                                                                                                                                                           |
+| `api-fuzzing`     | restler (Microsoft REST API fuzzer)                                                                                                                                                                                                        |
+| `exploit-lookup`  | searchsploit (Exploit-DB)                                                                                                                                                                                                                  |
+| `orchestrator`    | prefect-server, prefect-worker                                                                                                                                                                                                             |
+| `defectdojo`      | defectdojo, defectdojo-db, defectdojo-rabbitmq                                                                                                                                                                                             |
 
 ---
 
