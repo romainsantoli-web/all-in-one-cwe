@@ -27,7 +27,7 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 
 ---
 
-## � Screenshots & Démo
+## Screenshots & Démo
 
 ![LLM Agent](screenshots/llm-agent.png)
 ![LLM Agent Map](screenshots/llm-agent-map.png)
@@ -38,7 +38,7 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 
 ---
 
-## �🚀 Installation rapide
+## 🚀 Installation rapide
 
 ```bash
 # Cloner le repo
