@@ -29,12 +29,8 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 
 ## � Screenshots & Démo
 
-![Dashboard Home](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/dashboard.png)
-![Scan Launcher](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/launch.png)
 ![LLM Agent](screenshots/llm-agent.png)
 ![LLM Agent Map](screenshots/llm-agent-map.png)
-![DefectDojo Import](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/defectdojo.png)
-![Terminal + PixelDog](https://github.com/romainsantoli-web/all-in-one-cwe/blob/main/screenshots/terminal.png)
 ![Password Crack](screenshots/password-crack.png)
 ![Shell Tamagotchi](screenshots/shell-tamagotchi.png)
 
