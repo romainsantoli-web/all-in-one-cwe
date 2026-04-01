@@ -16,16 +16,17 @@ const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), {
 interface CrawlNode {
   id: string;
   url: string;
-  type: "page" | "api" | "asset" | "external" | "form";
+  type: "page" | "api" | "asset" | "external" | "form" | "subdomain";
   status?: number;
   tech?: string[];
   depth: number;
+  source?: string;
 }
 
 interface CrawlLink {
   source: string;
   target: string;
-  type: "link" | "redirect" | "form" | "api" | "asset";
+  type: "link" | "redirect" | "form" | "api" | "asset" | "subdomain";
 }
 
 interface SiteGraphData {
@@ -36,6 +37,8 @@ interface SiteGraphData {
     total_urls: number;
     crawl_depth: number;
     duration_s: number;
+    tools_used?: string[];
+    tools_status?: Record<string, string>;
   };
 }
 
@@ -45,6 +48,7 @@ const NODE_COLORS: Record<CrawlNode["type"], string> = {
   asset: "#9E9E9E",
   external: "#9C27B0",
   form: "#F44336",
+  subdomain: "#00BCD4",
 };
 
 const LINK_COLORS: Record<CrawlLink["type"], string> = {
@@ -53,6 +57,7 @@ const LINK_COLORS: Record<CrawlLink["type"], string> = {
   form: "rgba(244,67,54,0.4)",
   api: "rgba(255,152,0,0.4)",
   asset: "rgba(158,158,158,0.15)",
+  subdomain: "rgba(0,188,212,0.4)",
 };
 
 type CrawlStatus = "idle" | "starting" | "running" | "completed" | "error";
@@ -79,7 +84,10 @@ export default function SiteMap3D() {
   // Display options
   const [showAssets, setShowAssets] = useState(false);
   const [showExternal, setShowExternal] = useState(true);
+  const [showSubdomains, setShowSubdomains] = useState(true);
   const [highlight, setHighlight] = useState<string | null>(null);
+  const [toolStatus, setToolStatus] = useState<Record<string, string>>({});
+  const [progress, setProgress] = useState("");
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -142,7 +150,11 @@ export default function SiteMap3D() {
             if (pollRef.current) clearInterval(pollRef.current);
             setGraphData(pollData);
             setStatus("completed");
-          } else if (pollData.status !== "running") {
+            setToolStatus(pollData.meta?.tools_status || {});
+          } else if (pollData.status === "running") {
+            if (pollData.tool_status) setToolStatus(pollData.tool_status);
+            if (pollData.progress) setProgress(pollData.progress);
+          } else {
             if (pollRef.current) clearInterval(pollRef.current);
             setStatus("error");
             setError(pollData.error || "Crawl failed");
@@ -184,6 +196,7 @@ export default function SiteMap3D() {
     const filteredNodes = graphData.nodes.filter((n) => {
       if (!showAssets && n.type === "asset") return false;
       if (!showExternal && n.type === "external") return false;
+      if (!showSubdomains && n.type === "subdomain") return false;
       return true;
     });
 
@@ -193,7 +206,7 @@ export default function SiteMap3D() {
     );
 
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [graphData, showAssets, showExternal]);
+  }, [graphData, showAssets, showExternal, showSubdomains]);
 
   const handleNodeClick = useCallback((node: any) => {
     setHighlight((prev) => (prev === node.id ? null : (node.id as string)));
@@ -272,9 +285,20 @@ export default function SiteMap3D() {
         <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-6 mb-4 text-center">
           <div className="inline-block w-8 h-8 border-3 border-[var(--accent)] border-t-transparent rounded-full animate-spin mb-3" />
           <p className="text-sm text-[var(--text-muted)]">
-            Katana is crawling <span className="text-[var(--text)] font-mono">{target}</span> at depth {depth}…
+            Mapping <span className="text-[var(--text)] font-mono">{target}</span> at depth {depth}…
           </p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">This may take 30s to 3 minutes.</p>
+          {progress && <p className="text-xs text-[var(--accent)] mt-1">{progress}</p>}
+          {Object.keys(toolStatus).length > 0 && (
+            <div className="flex justify-center gap-4 mt-3">
+              {Object.entries(toolStatus).map(([tool, st]) => (
+                <span key={tool} className="flex items-center gap-1.5 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${st === "running" ? "bg-yellow-400 animate-pulse" : st === "done" ? "bg-green-400" : st === "failed" ? "bg-red-400" : "bg-gray-500"}`} />
+                  <span className="text-[var(--text-muted)]">{tool}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-[var(--text-muted)] mt-2">This may take 30s to 3 minutes.</p>
         </div>
       )}
 
@@ -285,6 +309,9 @@ export default function SiteMap3D() {
           <div className="flex items-center gap-4 mb-4 flex-wrap">
             <span className="text-xs text-[var(--text-muted)]">
               {graphData.meta.total_urls} URLs · {graphData.links.length} links · depth {graphData.meta.crawl_depth} · {graphData.meta.duration_s}s
+              {graphData.meta.tools_used && graphData.meta.tools_used.length > 0 && (
+                <> · tools: {graphData.meta.tools_used.join(", ")}</>
+              )}
             </span>
             <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
               <input type="checkbox" checked={showAssets} onChange={(e) => setShowAssets(e.target.checked)} />
@@ -293,6 +320,10 @@ export default function SiteMap3D() {
             <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
               <input type="checkbox" checked={showExternal} onChange={(e) => setShowExternal(e.target.checked)} />
               External
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <input type="checkbox" checked={showSubdomains} onChange={(e) => setShowSubdomains(e.target.checked)} />
+              Subdomains
             </label>
             {highlight && (
               <span className="text-xs text-[var(--accent)] bg-[var(--accent)]/10 px-2 py-1 rounded">
@@ -329,6 +360,7 @@ export default function SiteMap3D() {
                 if (node.type === "api") return 5;
                 if (node.type === "form") return 4;
                 if (node.type === "external") return 2;
+                if (node.type === "subdomain") return 3;
                 return 1;
               }}
               nodeOpacity={0.9}
@@ -366,12 +398,14 @@ export default function SiteMap3D() {
           <div className="text-4xl mb-3">🌐</div>
           <h3 className="font-semibold mb-1">Site Architecture Mapper</h3>
           <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
-            Enter a target URL to crawl it with Katana and visualize its architecture
-            as an interactive 3D graph. Pages, APIs, forms, and external links are
-            color-coded and connected.
+            Enter a target URL to map its architecture using multiple tools:
+            <strong> katana</strong> (JS-aware crawling),
+            <strong> httpx</strong> (HTTP probing + tech detection),
+            <strong> subfinder</strong> (subdomain enumeration).
+            Results merge into an interactive 3D graph.
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-3">
-            Requires Docker running with the <code className="bg-[var(--border)] px-1 rounded">projectdiscovery/katana</code> image.
+            Tools auto-detected from PATH. Install via: <code className="bg-[var(--border)] px-1 rounded">brew install katana httpx subfinder</code>
           </p>
         </div>
       )}
