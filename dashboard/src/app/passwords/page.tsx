@@ -17,6 +17,9 @@ interface VaultResult {
   size: number;
   encrypted: boolean;
   note: string;
+  kdf: string;
+  iterations: number;
+  kdf_params: string;
 }
 
 interface ScanResult {
@@ -140,6 +143,15 @@ export default function PasswordsPage() {
   const [ssid, setSsid] = useState("");
   const [bssid, setBssid] = useState("");
   const [isp, setIsp] = useState("");
+
+  // --- Password hints state ---
+  const [hintPrefix, setHintPrefix] = useState("");
+  const [hintSuffix, setHintSuffix] = useState("");
+  const [hintKnownDigits, setHintKnownDigits] = useState("");
+  const [hintKnownSpecial, setHintKnownSpecial] = useState("");
+  const [hintFragments, setHintFragments] = useState("");
+  const [hintMinLen, setHintMinLen] = useState("");
+  const [hintMaxLen, setHintMaxLen] = useState("");
 
   // --- Recovery pipeline state ---
   const [recoverStatus, setRecoverStatus] = useState<RecoverStatus>("idle");
@@ -268,9 +280,15 @@ export default function PasswordsPage() {
   }, [selectedDevice]);
 
   // --- Select vault from scan results ---
-  const selectVaultForRecovery = useCallback((filePath: string) => {
-    setRecoverTarget(filePath);
+  const selectVaultForRecovery = useCallback((v: VaultResult) => {
+    setRecoverTarget(v.file_path);
     setRecoverUseFile(false);
+    if (v.iterations > 0) {
+      setRecoverIterations(v.iterations);
+    }
+    if (v.format_id) {
+      setRecoverFormat(v.format_id);
+    }
     document.getElementById("recovery-section")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
@@ -294,8 +312,8 @@ export default function PasswordsPage() {
     const payload: Record<string, unknown> = {
       strategy: recoverStrategy,
       charset: recoverCharset,
-      min_length: parseInt(recoverMinLen) || 8,
-      max_length: parseInt(recoverMaxLen) || 16,
+      min_length: parseInt(hintMinLen || recoverMinLen) || 8,
+      max_length: parseInt(hintMaxLen || recoverMaxLen) || 16,
       threads: parseInt(recoverThreads) || 0,
       concurrent: parseInt(recoverConcurrent) || 8,
     };
@@ -327,6 +345,24 @@ export default function PasswordsPage() {
     if (partials.length > 0) profileTokens.partials = partials;
     const oldPws = oldPasswords.split(",").map(k => k.trim()).filter(Boolean);
     if (oldPws.length > 0) profileTokens.oldPasswords = oldPws;
+    // hints / fragments
+    const hints: Record<string, string | string[]> = {};
+    if (hintPrefix.trim()) hints.prefix = hintPrefix.trim();
+    if (hintSuffix.trim()) hints.suffix = hintSuffix.trim();
+    if (hintKnownDigits.trim()) hints.known_digits = hintKnownDigits.trim();
+    if (hintKnownSpecial.trim()) hints.known_special = hintKnownSpecial.trim();
+    const frags = hintFragments.split(",").map(f => f.trim()).filter(Boolean);
+    if (frags.length > 0) hints.fragments = frags;
+    if (hintMinLen.trim()) hints.min_length = hintMinLen.trim();
+    if (hintMaxLen.trim()) hints.max_length = hintMaxLen.trim();
+    if (Object.keys(hints).length > 0) {
+      profileTokens.hints = Object.entries(hints).map(([k, v]) => `${k}:${Array.isArray(v) ? v.join("|") : v}`);
+      if (!partials.length) profileTokens.partials = [];
+      // merge hint prefix/suffix/fragments into partials for the cracker
+      if (hintPrefix.trim()) profileTokens.partials = [...(profileTokens.partials || []), hintPrefix.trim()];
+      if (hintSuffix.trim()) profileTokens.partials = [...(profileTokens.partials || []), hintSuffix.trim()];
+      frags.forEach(f => { profileTokens.partials = [...(profileTokens.partials || []), f]; });
+    }
     if (Object.keys(profileTokens).length > 0) payload.profile = profileTokens;
 
     try {
@@ -744,6 +780,7 @@ export default function PasswordsPage() {
                     <tr className="text-left text-[var(--text-dim)] border-b border-[var(--border)]">
                       <th className="py-2">Format</th>
                       <th className="py-2">Path</th>
+                      <th className="py-2">KDF / Iterations</th>
                       <th className="py-2 text-right">Size</th>
                       <th className="py-2 text-center">Enc.</th>
                       <th className="py-2 text-center">Crack</th>
@@ -760,6 +797,18 @@ export default function PasswordsPage() {
                         </td>
                         <td className="py-2 text-[var(--text-dim)] font-mono truncate max-w-[200px]" title={r.file_path}>
                           {r.file_path}
+                        </td>
+                        <td className="py-2 text-[var(--text-dim)]" title={r.kdf_params || ""}>
+                          {r.kdf ? (
+                            <div>
+                              <span className="text-cyan-400 font-medium">{r.kdf}</span>
+                              {r.iterations > 0 && (
+                                <span className="text-yellow-400 ml-1">× {r.iterations.toLocaleString()}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[var(--text-dim)]">—</span>
+                          )}
                         </td>
                         <td className="py-2 text-right text-[var(--text-dim)]">
                           {r.size > 1024 * 1024
@@ -778,9 +827,9 @@ export default function PasswordsPage() {
                         <td className="py-2 text-center">
                           {r.encrypted && (
                             <button
-                              onClick={() => selectVaultForRecovery(r.file_path)}
+                              onClick={() => selectVaultForRecovery(r)}
                               className="text-[10px] px-2 py-0.5 rounded bg-orange-600/20 text-orange-400 hover:bg-orange-600/40 transition-colors"
-                              title="Send to recovery pipeline"
+                              title={r.kdf && r.iterations ? `${r.kdf} × ${r.iterations.toLocaleString()} iterations` : "Send to recovery pipeline"}
                             >
                               ⚡ Crack
                             </button>
@@ -918,6 +967,134 @@ export default function PasswordsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ============= PASSWORD HINTS & FRAGMENTS ============= */}
+      <div className="mt-6">
+        <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-5">
+          <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
+            🧩 Password Hints &amp; Fragments
+          </h2>
+          <p className="text-xs text-[var(--text-dim)] mb-4">
+            Enter any fragments you remember — the recovery engine will prioritize combinations starting
+            with these prefixes, containing these digits/characters, and matching this length range.
+          </p>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Known beginning
+              </label>
+              <input
+                type="text"
+                value={hintPrefix}
+                onChange={(e) => setHintPrefix(e.target.value)}
+                placeholder="Pass, MyP@, 2024"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)] font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Known ending
+              </label>
+              <input
+                type="text"
+                value={hintSuffix}
+                onChange={(e) => setHintSuffix(e.target.value)}
+                placeholder="!23, 2024, xyz"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)] font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Known digits
+              </label>
+              <input
+                type="text"
+                value={hintKnownDigits}
+                onChange={(e) => setHintKnownDigits(e.target.value)}
+                placeholder="19, 42, 007"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)] font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Known special chars
+              </label>
+              <input
+                type="text"
+                value={hintKnownSpecial}
+                onChange={(e) => setHintKnownSpecial(e.target.value)}
+                placeholder="@, !, #, $"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)] font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
+            <div className="lg:col-span-1">
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Other fragments (comma separated)
+              </label>
+              <input
+                type="text"
+                value={hintFragments}
+                onChange={(e) => setHintFragments(e.target.value)}
+                placeholder="crypto, lune, btc, sol"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)] font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Estimated min length
+              </label>
+              <input
+                type="number"
+                value={hintMinLen}
+                onChange={(e) => setHintMinLen(e.target.value)}
+                min={1}
+                max={64}
+                placeholder="8"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)]"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">
+                Estimated max length
+              </label>
+              <input
+                type="number"
+                value={hintMaxLen}
+                onChange={(e) => setHintMaxLen(e.target.value)}
+                min={1}
+                max={64}
+                placeholder="16"
+                className="w-full px-3 py-2 text-sm rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-dim)]"
+              />
+            </div>
+          </div>
+
+          {/* Summary of active hints */}
+          {(hintPrefix || hintSuffix || hintKnownDigits || hintKnownSpecial || hintFragments) && (
+            <div className="mt-3 p-3 rounded bg-yellow-900/10 border border-yellow-800/30 text-xs">
+              <span className="text-yellow-400 font-medium">Active hints: </span>
+              <span className="text-[var(--text-dim)]">
+                {[
+                  hintPrefix && `starts with "${hintPrefix}"`,
+                  hintSuffix && `ends with "${hintSuffix}"`,
+                  hintKnownDigits && `contains digits "${hintKnownDigits}"`,
+                  hintKnownSpecial && `contains "${hintKnownSpecial}"`,
+                  hintFragments && `fragments: ${hintFragments}`,
+                  hintMinLen && `min ${hintMinLen} chars`,
+                  hintMaxLen && `max ${hintMaxLen} chars`,
+                ].filter(Boolean).join(" · ")}
+              </span>
+              <span className="text-yellow-500 ml-2">
+                → auto-included in recovery profile
+              </span>
             </div>
           )}
         </div>
@@ -1135,7 +1312,7 @@ export default function PasswordsPage() {
               </div>
 
               <p className="text-[10px] text-[var(--text-dim)]">
-                Profile data from the Wordlist Generator section is automatically included.
+                Profile data from the Wordlist Generator + Password Hints sections is automatically included.
               </p>
             </div>
 
@@ -1217,11 +1394,14 @@ export default function PasswordsPage() {
                 </div>
               )}
 
-              {/* Vault info */}
-              {(recoverIterations || recoverParallel) && (
-                <div className="flex gap-3 text-xs text-[var(--text-dim)]">
+              {/* Vault info — detected KDF + iterations from scan or engine */}
+              {(recoverIterations || recoverParallel || recoverFormat) && (
+                <div className="flex gap-3 text-xs text-[var(--text-dim)] flex-wrap">
+                  {recoverFormat && (
+                    <span>📁 Format: <span className="text-cyan-400">{recoverFormat}</span></span>
+                  )}
                   {recoverIterations && (
-                    <span>🔐 {recoverIterations.toLocaleString()} PBKDF2 iterations</span>
+                    <span>🔐 <span className="text-yellow-400">{recoverIterations.toLocaleString()}</span> iterations</span>
                   )}
                   {recoverParallel && (
                     <span>⚡ {recoverParallel} parallel operations</span>

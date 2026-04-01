@@ -52,6 +52,9 @@ export async function GET(req: NextRequest) {
       size: number;
       encrypted: boolean;
       note: string;
+      kdf: string;
+      iterations: number;
+      kdf_params: string;
     }> = [];
 
     try {
@@ -67,6 +70,9 @@ export async function GET(req: NextRequest) {
           size: f.size || 0,
           encrypted: f.encrypted ?? true,
           note: f.description || f.note || "",
+          kdf: f.kdf || "",
+          iterations: f.iterations || 0,
+          kdf_params: f.kdf_params || "",
         }));
       }
     } catch {

@@ -26,7 +26,7 @@ const MAX_LENGTH_LIMIT = 64;
 
 // Allowed profile keys (strict allowlist)
 const PROFILE_KEYS = new Set([
-  "names", "dates", "words", "partials", "oldPasswords",
+  "names", "dates", "words", "partials", "oldPasswords", "hints",
 ]);
 
 // --------------------------------------------------------------------------
