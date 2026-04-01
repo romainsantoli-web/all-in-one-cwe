@@ -1,6 +1,14 @@
 # 🛡️ Security All-in-One CWE — Bug Bounty Testing Suite
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Stars](https://img.shields.io/github/stars/romainsantoli-web/all-in-one-cwe)
+![Last Commit](https://img.shields.io/github/last-commit/romainsantoli-web/all-in-one-cwe)
 
+Suite complète de **70+ outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
+Tous les outils tournent via Docker Compose — un seul `make run` pour tout lancer.
 Suite complète de **59 outils** de sécurité offensive pour le bug bounty, organisée par catégorie CWE.
 Tous les outils tournent via Docker Compose — un seul `make run` pour tout lancer.
 
