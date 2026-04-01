@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { LLM_PROVIDERS, PROVIDER_MODELS } from "@/lib/tools-data";
 import { getProviderSettings, saveProviderSettings } from "@/lib/settings";
+import { unlink } from "fs/promises";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export async function DELETE(request: Request) {
     // Also remove related tokens if disconnecting copilot
     if (envVar === "COPILOT_OAUTH_TOKEN") {
       delete saved["COPILOT_JWT"];
+      // Clear Python-side cached token to prevent auto-sync restoring it
+      await unlink("/tmp/copilot_token.json").catch(() => {});
     }
     await saveProviderSettings(saved);
   }

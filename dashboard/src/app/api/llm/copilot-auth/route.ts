@@ -113,7 +113,7 @@ print(json.dumps(result))
   }
 }
 
-/** GET — Check current auth status */
+/** GET — Check current auth status (auto-syncs cached token to providers.json) */
 export async function GET() {
   try {
     const env = await getEnvWithSettings();
@@ -126,6 +126,31 @@ print(json.dumps(result))
 `;
     const raw = await runPython(code, env);
     const data = JSON.parse(raw);
+
+    // Auto-heal: if Python has a valid token but providers.json doesn't,
+    // extract and save it. This fixes the browser background-tab throttle
+    // issue where setInterval polling misses the auth completion.
+    if (data.authenticated && data.has_oauth) {
+      const saved = await getProviderSettings();
+      if (!saved["COPILOT_OAUTH_TOKEN"]) {
+        const extractCode = `
+import sys, json
+sys.path.insert(0, "${PROJECT_ROOT}")
+from llm.providers.copilot_pro import CopilotProProvider
+_, oauth, _ = CopilotProProvider._load_cached_tokens()
+print(json.dumps({"oauth_token": oauth or ""}))
+`;
+        const extractRaw = await runPython(extractCode, env);
+        const extracted = JSON.parse(extractRaw);
+        if (extracted.oauth_token) {
+          saved["COPILOT_OAUTH_TOKEN"] = extracted.oauth_token;
+          delete saved["COPILOT_JWT"];
+          await saveProviderSettings(saved);
+          data.synced = true;
+        }
+      }
+    }
+
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
