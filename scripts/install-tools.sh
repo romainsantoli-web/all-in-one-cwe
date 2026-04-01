@@ -153,6 +153,8 @@ install_docker_images() {
         "adguard/masscan:latest"
         # Orchestration
         "prefecthq/prefect:3-latest"
+        # DefectDojo
+        "defectdojo/defectdojo-django:latest"
     )
 
     local total=${#images[@]}
@@ -274,6 +276,30 @@ install_go_tools() {
             fi
         fi
     fi
+
+    # ppmap (prototype pollution scanner — manual build, not on go install)
+    if check_or_install "ppmap" "ppmap"; then
+        if has_cmd go; then
+            info "Installing ppmap (git clone + go build)..."
+            local ppmap_tmp="/tmp/ppmap-build"
+            rm -rf "$ppmap_tmp"
+            if git clone --depth 1 https://github.com/kleiton0x00/ppmap.git "$ppmap_tmp" >> "$INSTALL_LOG" 2>&1; then
+                (cd "$ppmap_tmp" && go mod init ppmap && go mod tidy && CGO_ENABLED=0 go build -o ppmap . ) >> "$INSTALL_LOG" 2>&1
+                if [[ -f "$ppmap_tmp/ppmap" ]]; then
+                    mkdir -p "$HOME/.local/bin"
+                    cp "$ppmap_tmp/ppmap" "$HOME/.local/bin/ppmap"
+                    chmod +x "$HOME/.local/bin/ppmap"
+                    log "ppmap installed to ~/.local/bin/"
+                    ((INSTALLED++)) || true
+                else
+                    err "ppmap build failed"
+                fi
+                rm -rf "$ppmap_tmp"
+            else
+                err "Failed to clone ppmap"
+            fi
+        fi
+    fi
 }
 
 install_go_tool_fallback() {
@@ -303,6 +329,21 @@ install_go_tool_fallback() {
 # ═════════════════════════════════════════════════════════
 install_rust_tools() {
     header "Installing Rust-based tools"
+
+    # Cherrybomb (OpenAPI security)
+    if check_or_install "cherrybomb" "cherrybomb"; then
+        if has_cmd cargo; then
+            info "Installing cherrybomb via cargo..."
+            if cargo install cherrybomb >> "$INSTALL_LOG" 2>&1; then
+                log "cherrybomb installed via cargo"
+                ((INSTALLED++)) || true
+            else
+                warn "cherrybomb install failed — will use Docker version"
+            fi
+        else
+            warn "Cargo not available — cherrybomb will use Docker version"
+        fi
+    fi
 
     # Feroxbuster
     if check_or_install "feroxbuster" "feroxbuster"; then
@@ -353,6 +394,7 @@ install_python_tools() {
         "wapiti3"
         "shodan"
         "commix"
+        "garak"
     )
 
     info "Installing ${#pip_packages[@]} Python packages..."
@@ -403,6 +445,7 @@ install_git_tools() {
         "https://github.com/Nefcore/CORScanner.git:corscanner:"
         "https://github.com/iamj0ker/bypass-403.git:bypass-403:"
         "https://github.com/ticarpi/jwt_tool.git:jwt_tool:pip install -r requirements.txt"
+        "https://gitlab.com/exploit-database/exploitdb.git:exploitdb:"
     )
 
     # Activate venv for installs that need pip
@@ -432,6 +475,14 @@ install_git_tools() {
     done
 
     deactivate 2>/dev/null || true
+
+    # Create searchsploit symlink (from exploitdb clone)
+    local exploitdb_dir="$git_tools_dir/exploitdb"
+    if [[ -f "$exploitdb_dir/searchsploit" ]] && ! has_cmd searchsploit; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$exploitdb_dir/searchsploit" "$HOME/.local/bin/searchsploit" 2>/dev/null || true
+        log "searchsploit symlinked to ~/.local/bin/"
+    fi
 }
 
 # ═════════════════════════════════════════════════════════
@@ -558,6 +609,9 @@ verify_installation() {
         "retire:retire"
         "whatweb:whatweb"
         "docker:docker"
+        "cherrybomb:cherrybomb"
+        "ppmap:ppmap"
+        "garak:garak"
     )
 
     local ok=0 missing=0
@@ -581,8 +635,8 @@ verify_installation() {
     if has_cmd docker; then
         echo ""
         local docker_images
-        docker_images=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -cE '(projectdiscovery|zaproxy|semgrep|gitleaks|trufflehog|trivy|cwe_checker|dnsreaper|testssl|nmap|dalfox|amass|dockle|checkov|hydra|mitmproxy|masscan)' || echo "0")
-        info "Docker images available: $docker_images / 26 expected"
+        docker_images=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -cE '(projectdiscovery|zaproxy|semgrep|gitleaks|trufflehog|trivy|cwe_checker|dnsreaper|testssl|nmap|dalfox|amass|dockle|checkov|hydra|mitmproxy|masscan|defectdojo|restler|prefect)' || echo "0")
+        info "Docker images available: $docker_images"
     fi
 
     echo ""

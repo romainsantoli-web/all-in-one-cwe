@@ -68,6 +68,9 @@ RUN git clone --depth 1 https://github.com/vladko312/SSTImap.git /opt/sstimap &&
     git clone --depth 1 https://github.com/commixproject/commix.git /opt/commix && \
     git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto
 
+# Clone searchsploit (exploit-db)
+RUN git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git /opt/exploitdb
+
 # Install Python dependencies for cloned tools
 RUN pip install --no-cache-dir \
     -r /opt/sstimap/requirements.txt \
@@ -101,6 +104,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     jq \
     dnsutils \
+    hydra \
+    masscan \
+    whatweb \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Go binaries
@@ -116,12 +122,23 @@ COPY --from=node-builder /usr/local/bin/node /usr/local/bin/
 COPY --from=node-builder /usr/local/bin/retire /usr/local/bin/ 2>/dev/null || true
 RUN ln -sf /usr/local/lib/node_modules/retire/bin/retire /usr/local/bin/retire 2>/dev/null || true
 
+# Install dnsreaper, trivy, dockle, checkov via pip/apt where possible
+# (Some tools like defectdojo, restler, prefect, mitmproxy, dependency-check,
+#  cwe-checker are Docker-only and should be run as separate containers)
+RUN pip install --no-cache-dir checkov 2>/dev/null || true
+
 # Copy git-cloned tools
 COPY --from=py-builder /opt/ /opt/
 COPY --from=py-builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
 COPY --from=py-builder /usr/local/bin/ /tmp/py-bins/
 RUN cp /tmp/py-bins/theHarvester /usr/local/bin/ 2>/dev/null || true && \
     rm -rf /tmp/py-bins
+
+# Copy custom Python scanners (local tools/python-scanners/)
+COPY tools/python-scanners/ /opt/python-scanners/
+RUN if [ -f /opt/python-scanners/requirements.txt ]; then \
+        pip install --no-cache-dir -r /opt/python-scanners/requirements.txt 2>/dev/null || true; \
+    fi
 
 # Install Python-based tools via pip
 RUN pip install --no-cache-dir \
@@ -133,6 +150,7 @@ RUN pip install --no-cache-dir \
     semgrep \
     wapiti3 \
     shodan \
+    garak \
     && rm -rf /root/.cache/pip
 
 # Create non-root user for scanning
@@ -140,7 +158,7 @@ RUN useradd -m -s /bin/bash scanner
 
 # Environment
 ENV CHROME_PATH=/usr/bin/chromium
-ENV PATH="/usr/local/bin:/opt/nikto/program:$PATH"
+ENV PATH="/usr/local/bin:/opt/nikto/program:/opt/exploitdb:$PATH"
 ENV PYTHONPATH="/opt"
 
 # Default working directory
@@ -164,8 +182,9 @@ case "${1:-help}" in
         echo "  Secrets:  semgrep, gitleaks (use gitleaks image), trufflehog (use image)"
         echo "  Network:  nmap, testssl, crlfuzz"
         echo "  API:      graphw00f, clairvoyance, cherrybomb"
-        echo "  OSINT:    theharvester, recon-ng, shodan"
+        echo "  OSINT:    theharvester, recon-ng, shodan, searchsploit"
         echo "  Other:    gowitness, jsluice, retire, ppmap, dockle (use image)"
+        echo "  AI:       garak (LLM vulnerability scanner)"
         echo ""
         echo "Example: docker run -v ./reports:/output security-aio:latest nuclei -u https://target.com"
         ;;
