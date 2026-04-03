@@ -1,4 +1,4 @@
-# 🛡️ Bug Bounty - Meta-Mask Password Recover - Security All-in-One CWE — Bug Bounty 
+# 🛡️ Bug Bounty - Meta Mask Password Recover - Security All-in-One CWE — Bug Bounty 
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
