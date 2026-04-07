@@ -34,8 +34,6 @@ Tous les outils tournent via Docker Compose — un seul `make run` pour tout lan
 ![Password Crack](screenshots/password-crack.png)
 ![Shell Tamagotchi](screenshots/shell-tamagotchi.png)
 
-**Vidéo démo 60 secondes** : [Voir la démo](https://www.youtube.com/watch?v=...) *(à ajouter quand tu auras la vidéo)*
-
 ---
 
 ## 🚀 Installation rapide
